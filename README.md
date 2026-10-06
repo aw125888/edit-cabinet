@@ -1,16 +1,7 @@
-# amberwu888
+# EDIT CABINET
 
-To install dependencies:
+EDIT CABINET is a detailed archive for edits that preserves their context and lets viewers discover them through the many topics they connect.
 
-```bash
-bun install
-```
+## P1: Design
 
-To run:
-
-```bash
-bun run index.ts
-```
-
-This project was created using `bun init` in bun v1.4.2. [Bun](https://bun.com) is a fast all-in-one JavaScript runtime.
-# edit-cabinet
+[View the P1 Design Submission](p1.md)
