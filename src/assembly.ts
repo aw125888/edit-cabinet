@@ -8,6 +8,7 @@ export function assembleApplication() {
     composition: {},
     initialize: {
       Posting: [db], 
+      Tagging: [db], 
     }, 
   });
 }
