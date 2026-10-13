@@ -6,6 +6,31 @@
 _Assembled by sync-engine from registered concepts and composition. Edit the concept_
 _specifications and composition source, then regenerate this file._
 
+## Concepts
+
+### Posting
+
+Defined in [Posting](../design/concepts/posting.md), line 1.
+
+#### Actions
+
+- `createPost(user: User, media: Item, caption: String) : returns (post: Post)`
+- `deletePost(post: Post) : returns ()`
+- `editCaption(post: Post, caption: String) : returns ()`
+
+#### Instances
+
+- `Posting` — instance of `Posting` — [EDIT CABINET Types](../design/types.md), line 12.
+  - `Item` is `Video` — [EDIT CABINET Types](../design/types.md), line 14.
+  - `User` is `Account` — [EDIT CABINET Types](../design/types.md), line 13.
+
+## Application types
+
+Concrete types:
+
+- `Account` — [EDIT CABINET Types](../design/types.md), line 4.
+- `Video` — [EDIT CABINET Types](../design/types.md), line 7.
+
 ## Reactions
 
 ### DeliverFaultToAsker
