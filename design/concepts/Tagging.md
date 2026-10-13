@@ -63,4 +63,7 @@ untagAll(item: Item): returns ()
 _itemsFor(tag: Tag) : many (item: Item)
   answers each item associated with the given tag,
   ordered deterministically by item
+
+_findTag(name: String, category: Category): optional (tag: Tag)
+    answers tag with given name and category if exists within Tags, else no row when no such Tag exists
 ```

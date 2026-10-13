@@ -142,6 +142,21 @@ test("tagItem throws an error for duplicate assignment", async () => {
     );
 });
 
+test("findTag returns the tag ID for an existing tag", async () => {
+    const { tag } = await tagging.createTag({
+        name: "testtag",
+        category: "Aesthetic",
+    });
+
+    const foundTag = await tagging._findTag({ name: "testtag", category: "Aesthetic" });
+    expect(foundTag).toEqual({ tag });
+});
+
+test("findTag returns null for a non-existent tag", async () => {
+    const foundTag = await tagging._findTag({ name: "nonexistenttag", category: "Aesthetic" });
+    expect(foundTag).toBeNull();
+});
+
 
 
 

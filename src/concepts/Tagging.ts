@@ -102,6 +102,12 @@ export class TaggingConcept<Item extends string, Category extends string> {
         return assignments.map(a => ({item: a.item})); 
     }
 
+    async _findTag({name, category}: {name: string; category: Category}): Promise<{tag: string} | null> {
+        const tag = await this.tags.findOne({name, category});
+        return tag ? {tag: tag._id} : null;
+        
+    }
+
 
 
 
