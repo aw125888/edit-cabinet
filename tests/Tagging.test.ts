@@ -149,12 +149,12 @@ test("findTag returns the tag ID for an existing tag", async () => {
     });
 
     const foundTag = await tagging._findTag({ name: "testtag", category: "Aesthetic" });
-    expect(foundTag).toEqual({ tag });
+    expect(foundTag).toEqual([{ tag: tag }]);
 });
 
 test("findTag returns null for a non-existent tag", async () => {
     const foundTag = await tagging._findTag({ name: "nonexistenttag", category: "Aesthetic" });
-    expect(foundTag).toBeNull();
+    expect(foundTag).toEqual([]);
 });
 
 
