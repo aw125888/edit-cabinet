@@ -50,6 +50,23 @@ export class PostingConcept<User, Item> {
 
     }
 
+    async _get(
+        { post }: { post: string }
+        ): Promise<{ user: User; media: Item; caption: string }[]> {
+        
+            const found = await this.posts.findOne({ _id: post });
+
+        if (found === null) {
+            return [];
+        }
+
+        return [{
+            user: found.author,
+            media: found.media,
+            caption: found.caption,
+        }];
+        }
+
 
 
 }

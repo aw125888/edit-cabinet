@@ -1,30 +1,19 @@
 import { endpoint, receive, respond } from "@mit-sdg/sync-engine/boundary";
 import { no, where } from "@mit-sdg/sync-engine/language";
 import { concepts } from "../concepts.ts";
-import { catalogPostInput } from "./validators.ts";
 
 const { Posting, Tagging} = concepts;
 
-
 const CreateCatalogPost = endpoint(
-    "/catalog/post",
-    ({user, media, caption, tags, post}) => 
-        receive({user, media, caption, tags})
-            .then(
-                Posting.createPost({user, media, caption})
-                    .responds({post})
-            )
-            .then(respond({post})), 
-         {
-    input: {
-      required: ["user", "media", "caption", "tags"],
-    },
-    validators: {
-      input: catalogPostInput,
-    },
-  },
-); 
-
+  "/catalog/post",
+  ({ user, media, caption, post }) =>
+    receive({ user, media, caption })
+      .then(
+        Posting.createPost({ user, media, caption })
+          .responds({ post })
+      )
+      .then(respond({ post })),
+);
 
 const AttachCatalogTag = endpoint(
   "/catalog/tag",

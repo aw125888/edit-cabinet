@@ -20,18 +20,137 @@ Defined in [Posting](../design/concepts/posting.md), line 1.
 
 #### Instances
 
-- `Posting` — instance of `Posting` — [EDIT CABINET Types](../design/types.md), line 12.
-  - `Item` is `Video` — [EDIT CABINET Types](../design/types.md), line 14.
-  - `User` is `Account` — [EDIT CABINET Types](../design/types.md), line 13.
+- `Posting` — instance of `Posting` — [EDIT CABINET Types](../design/types.md), line 15.
+  - `Item` is `Video` — [EDIT CABINET Types](../design/types.md), line 17.
+  - `User` is `Account` — [EDIT CABINET Types](../design/types.md), line 16.
+
+### Tagging
+
+Defined in [Tagging](../design/concepts/Tagging.md), line 1.
+
+#### Actions
+
+- `createTag(name: String, category: Category) : returns (tag: Tag)`
+- `tagItem(item: Item, tag: Tag) : returns (assignment: TagAssignment)`
+- `untagItem(assignment: TagAssignment) : returns ()`
+- `untagAll(item: Item) : returns ()`
+
+#### Queries
+
+- `_itemsFor(tag: Tag) : many (item: Item)`
+- `_findTag(name: String, category: Category) : optional (tag: Tag)`
+
+#### Instances
+
+- `Tagging` — instance of `Tagging` — [EDIT CABINET Types](../design/types.md), line 19.
+  - `Category` is `TagCategory` — [EDIT CABINET Types](../design/types.md), line 21.
+  - `Item` is `Posting.Post` — [EDIT CABINET Types](../design/types.md), line 20.
 
 ## Application types
 
 Concrete types:
 
 - `Account` — [EDIT CABINET Types](../design/types.md), line 4.
+- `TagCategory` — [EDIT CABINET Types](../design/types.md), line 10.
 - `Video` — [EDIT CABINET Types](../design/types.md), line 7.
 
 ## Reactions
+
+### Catalog.AttachCatalogTag:tag-exists
+
+Authored path: `Catalog.AttachCatalogTag`.
+- Covered by [Catalog](../design/compositions/Catalog.md), line 5.
+- Covered by [Catalog](../design/compositions/Catalog.md), line 9.
+
+```reaction
+when RequestBoundary.request (category, name, path: "/catalog/tag", post, requestId)
+where
+  Tagging._findTag (category, name) has (tag)
+then
+  Tagging.tagItem (item: post, tag)
+```
+
+### Catalog.AttachCatalogTag:tag-exists#2
+
+Authored path: `Catalog.AttachCatalogTag`.
+- Covered by [Catalog](../design/compositions/Catalog.md), line 5.
+- Covered by [Catalog](../design/compositions/Catalog.md), line 9.
+
+```reaction
+when Tagging.tagItem (item: post, tag, assignment), asked by Catalog.AttachCatalogTag:tag-exists
+where
+  earlier, RequestBoundary.request (category, name, path: "/catalog/tag", post, requestId)
+then
+  RequestBoundary.respond (assignment, requestId)
+```
+
+### Catalog.AttachCatalogTag:tag-missing
+
+Authored path: `Catalog.AttachCatalogTag`.
+- Covered by [Catalog](../design/compositions/Catalog.md), line 5.
+- Covered by [Catalog](../design/compositions/Catalog.md), line 9.
+
+```reaction
+when RequestBoundary.request (category, name, path: "/catalog/tag", post, requestId)
+where
+  no Tagging._findTag (category, name)
+then
+  Tagging.createTag (category, name)
+```
+
+### Catalog.AttachCatalogTag:tag-missing#2
+
+Authored path: `Catalog.AttachCatalogTag`.
+- Covered by [Catalog](../design/compositions/Catalog.md), line 5.
+- Covered by [Catalog](../design/compositions/Catalog.md), line 9.
+
+```reaction
+when Tagging.createTag (category, name, tag: newTag), asked by Catalog.AttachCatalogTag:tag-missing
+where
+  earlier, RequestBoundary.request (category, name, path: "/catalog/tag", post, requestId)
+then
+  Tagging.tagItem (item: post, tag: newTag)
+```
+
+### Catalog.AttachCatalogTag:tag-missing#3
+
+Authored path: `Catalog.AttachCatalogTag`.
+- Covered by [Catalog](../design/compositions/Catalog.md), line 5.
+- Covered by [Catalog](../design/compositions/Catalog.md), line 9.
+
+```reaction
+when Tagging.tagItem (item: post, tag: newTag, assignment), asked by Catalog.AttachCatalogTag:tag-missing#2
+where
+  earlier, RequestBoundary.request (category, name, path: "/catalog/tag", post, requestId)
+then
+  RequestBoundary.respond (assignment, requestId)
+```
+
+### Catalog.CreateCatalogPost
+
+Authored path: `Catalog.CreateCatalogPost`.
+- Covered by [Catalog](../design/compositions/Catalog.md), line 3.
+- Covered by [Catalog](../design/compositions/Catalog.md), line 8.
+
+```reaction
+when RequestBoundary.request (caption, media, path: "/catalog/post", requestId, user)
+then
+  Posting.createPost (caption, media, user)
+```
+
+### Catalog.CreateCatalogPost#2
+
+Authored path: `Catalog.CreateCatalogPost`.
+- Covered by [Catalog](../design/compositions/Catalog.md), line 3.
+- Covered by [Catalog](../design/compositions/Catalog.md), line 8.
+
+```reaction
+when Posting.createPost (caption, media, user, post), asked by Catalog.CreateCatalogPost
+where
+  earlier, RequestBoundary.request (caption, media, path: "/catalog/post", requestId, user)
+then
+  RequestBoundary.respond (post, requestId)
+```
 
 ### DeliverFaultToAsker
 
@@ -53,3 +172,12 @@ then
   RequestBoundary.respond (error: message, requestId)
 ```
 
+## Endpoint input contracts
+
+Before recording an action ask, the boundary rejects a body that is not an
+object or lacks a required key. The response uses `INVALID_INPUT` and names
+the path or missing key. A declared default fills an absent key. Endpoints
+not listed here have no explicit input contract.
+
+- `/catalog/post` — requires `caption`, `media`, `user`
+- `/catalog/tag` — requires `category`, `name`, `post`

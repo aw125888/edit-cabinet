@@ -75,3 +75,26 @@ test("editCaption throws an error when trying to edit a non-existent post", asyn
         `Post with ID ${nonExistentPostId} does not exist.`
     );
 });
+
+test("_get returns an existing post", async () => {
+  const { post } = await posting.createPost({
+    user: "amber",
+    media: "https://example.com/video",
+    caption: "Daenerys edit",
+  });
+
+  const results = await posting._get({ post });
+
+  expect(results).toHaveLength(1);
+  expect(results[0]?.user).toBe("amber");
+  expect(results[0]?.media).toBe("https://example.com/video");
+  expect(results[0]?.caption).toBe("Daenerys edit");
+});
+
+test("_get returns no row for a nonexistent post", async () => {
+  const results = await posting._get({
+    post: "does-not-exist",
+  });
+
+  expect(results).toEqual([]);
+});

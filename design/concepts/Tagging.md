@@ -66,4 +66,8 @@ _itemsFor(tag: Tag) : many (item: Item)
 
 _findTag(name: String, category: Category): optional (tag: Tag)
     answers tag with given name and category if exists within Tags, else no row when no such Tag exists
+
+_tagsFor(item: Item) : many (tag: Tag, name: String, category: Category)
+  answers every tag associated with the given item with its name and category,
+  ordered deterministically by tag
 ```

@@ -48,4 +48,7 @@ editCaption(post: Post, caption: String): returns ()
 ## Queries
 
 ```queries
+_get(post: Post) : optional (user: User, media: Item, caption: String)
+  answers the user, media, and caption of the given post if it exists
+  answers no row if the post does not exist
 ```

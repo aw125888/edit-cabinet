@@ -157,6 +157,49 @@ test("findTag returns null for a non-existent tag", async () => {
     expect(foundTag).toEqual([]);
 });
 
+test("_tagsFor returns all tags assigned to an item", async () => {
+  const { tag: aesthetic } = await tagging.createTag({
+    name: "Girlhood",
+    category: "Aesthetic/Concept",
+  });
+
+  const { tag: character } = await tagging.createTag({
+    name: "Daenerys Targaryen",
+    category: "Characters",
+  });
+
+  await tagging.tagItem({
+    tag: aesthetic,
+    item: "post123",
+  });
+
+  await tagging.tagItem({
+    tag: character,
+    item: "post123",
+  });
+
+  const results = await tagging._tagsFor({
+    item: "post123",
+  });
+
+  expect(results).toHaveLength(2);
+
+  expect(results).toEqual(
+    expect.arrayContaining([
+      {
+        tag: aesthetic,
+        name: "Girlhood",
+        category: "Aesthetic/Concept",
+      },
+      {
+        tag: character,
+        name: "Daenerys Targaryen",
+        category: "Characters",
+      },
+    ]),
+  );
+});
+
 
 
 
