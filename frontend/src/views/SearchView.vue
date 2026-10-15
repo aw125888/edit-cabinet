@@ -1,17 +1,293 @@
 <script setup lang="ts">
+import { computed, ref } from "vue";
+
 defineEmits<{
   back: [];
 }>();
+
+const categories = [
+  "Aesthetic/Concept",
+  "Media",
+  "Characters",
+  "Musical Artist",
+  "Song",
+  "Public Figure",
+  "Things",
+] as const;
+
+type Category = (typeof categories)[number];
+
+interface SearchTag {
+  name: string;
+  category: Category;
+}
+
+interface ResultTag {
+  tag: string;
+  name: string;
+  category: string;
+}
+
+interface SearchResult {
+  post: string;
+  user: string;
+  media: string;
+  caption: string;
+  tags: ResultTag[];
+  matches: number;
+}
+
+const selectedTags = ref<SearchTag[]>([]);
+
+const tagInputs = ref<Record<Category, string>>({
+  "Aesthetic/Concept": "",
+  "Media": "",
+  "Characters": "",
+  "Musical Artist": "",
+  "Song": "",
+  "Public Figure": "",
+  "Things": "",
+});
+
+const results = ref<SearchResult[]>([]);
+const message = ref("");
+const searching = ref(false);
+
+const canSearch = computed(() => selectedTags.value.length >= 1);
+
+function tagsFor(category: Category) {
+  return selectedTags.value.filter(
+    (tag) => tag.category === category,
+  );
+}
+
+function addTag(category: Category) {
+  const name = tagInputs.value[category].trim();
+
+  if (!name) {
+    return;
+  }
+
+  const duplicate = selectedTags.value.some(
+    (tag) =>
+      tag.category === category &&
+      tag.name.toLowerCase() === name.toLowerCase(),
+  );
+
+  if (duplicate) {
+    message.value = `"${name}" is already selected.`;
+    return;
+  }
+
+  selectedTags.value.push({
+    name,
+    category,
+  });
+
+  tagInputs.value[category] = "";
+  message.value = "";
+}
+
+function removeTag(tagToRemove: SearchTag) {
+  selectedTags.value = selectedTags.value.filter(
+    (tag) => tag !== tagToRemove,
+  );
+}
+
+async function search() {
+  if (!canSearch.value) {
+    return;
+  }
+
+  searching.value = true;
+  results.value = [];
+  message.value = "Searching...";
+
+  try {
+    // Maps each matching Post ID to the number of searched tags it matched.
+    const matchCounts = new Map<string, number>();
+
+    // Search the backend once for each selected tag.
+    for (const tag of selectedTags.value) {
+      const response = await fetch(
+        "http://localhost:3000/api/search/tag",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            name: tag.name,
+            category: tag.category,
+          }),
+        },
+      );
+
+      if (!response.ok) {
+        throw new Error(`Search failed for tag "${tag.name}"`);
+      }
+
+      const data = await response.json();
+
+      // Count how many selected tags matched each Post.
+      for (const item of data.results.items) {
+        const oldCount = matchCounts.get(item.item) ?? 0;
+        matchCounts.set(item.item, oldCount + 1);
+      }
+    }
+
+    const foundResults: SearchResult[] = [];
+
+    // Get the actual Post details and all associated tags.
+    for (const [post, matches] of matchCounts) {
+      const response = await fetch(
+        "http://localhost:3000/api/search/post",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            post,
+          }),
+        },
+      );
+
+      if (!response.ok) {
+        throw new Error(`Could not retrieve post "${post}"`);
+      }
+
+      const data = await response.json();
+
+      foundResults.push({
+        ...data.result,
+        matches,
+      });
+    }
+
+    // Most matching tags first.
+    foundResults.sort((a, b) => b.matches - a.matches);
+
+    results.value = foundResults;
+
+    if (foundResults.length === 0) {
+      message.value = "No matching edits found.";
+    } else {
+      message.value = `Found ${foundResults.length} matching edit(s).`;
+    }
+  } catch (error) {
+    console.error(error);
+    message.value = "Search failed.";
+  } finally {
+    searching.value = false;
+  }
+}
 </script>
 
 <template>
   <main>
-    <button @click="$emit('back')">
+    <button type="button" @click="$emit('back')">
       ← Back
     </button>
 
     <h1>Search</h1>
 
-    <p>Search goes here.</p>
+    <p>Search for edits by tag.</p>
+
+    <section
+      v-for="category in categories"
+      :key="category"
+    >
+      <h3>{{ category }}</h3>
+
+      <div>
+        <input
+          v-model="tagInputs[category]"
+          type="text"
+          :placeholder="`Search ${category}`"
+          @keyup.enter="addTag(category)"
+        />
+
+        <button
+          type="button"
+          @click="addTag(category)"
+        >
+          Add
+        </button>
+      </div>
+
+      <ul>
+        <li
+          v-for="tag in tagsFor(category)"
+          :key="`${tag.category}-${tag.name}`"
+        >
+          {{ tag.name }}
+
+          <button
+            type="button"
+            @click="removeTag(tag)"
+          >
+            ×
+          </button>
+        </li>
+      </ul>
+    </section>
+
+    <p>Search tags: {{ selectedTags.length }}</p>
+
+    <button
+      type="button"
+      :disabled="!canSearch || searching"
+      @click="search"
+    >
+      {{ searching ? "Searching..." : "Search" }}
+    </button>
+
+    <p>{{ message }}</p>
+
+    <section v-if="results.length > 0">
+      <h2>Results</h2>
+
+      <article
+        v-for="result in results"
+        :key="result.post"
+      >
+        <h3>
+          {{ result.caption || "Untitled edit" }}
+        </h3>
+
+        <p>
+          {{ result.matches }}
+          matching
+          {{ result.matches === 1 ? "tag" : "tags" }}
+        </p>
+
+        <p>
+          Video:
+          <a
+            :href="result.media"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            {{ result.media }}
+          </a>
+        </p>
+
+        <p>
+          Cataloged by {{ result.user }}
+        </p>
+
+        <h4>Tags</h4>
+
+        <ul>
+          <li
+            v-for="tag in result.tags"
+            :key="tag.tag"
+          >
+            {{ tag.name }} — {{ tag.category }}
+          </li>
+        </ul>
+      </article>
+    </section>
   </main>
 </template>

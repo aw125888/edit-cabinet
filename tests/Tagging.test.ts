@@ -200,6 +200,34 @@ test("_tagsFor returns all tags assigned to an item", async () => {
   );
 });
 
+test("_findTag is case insensitive", async () => {
+  const { tag } = await tagging.createTag({
+    name: "Minimalism",
+    category: "Aesthetic/Concept",
+  });
+
+  const result = await tagging._findTag({
+    name: "minimalism",
+    category: "Aesthetic/Concept",
+  });
+
+  expect(result).toEqual([{ tag }]);
+});
+
+
+test("createTag rejects tags differing only by case", async () => {
+  await tagging.createTag({
+    name: "Minimalism",
+    category: "Aesthetic/Concept",
+  });
+
+  await expect(
+    tagging.createTag({
+      name: "MINIMALISM",
+      category: "Aesthetic/Concept",
+    }),
+  ).rejects.toThrow();
+});
 
 
 

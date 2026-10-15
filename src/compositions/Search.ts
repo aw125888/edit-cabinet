@@ -16,6 +16,46 @@ const ItemsForTag = former(
 
 );
 
+const PostResult = former(
+  "the search result for post (post)",
+  ({ post }, { user, media, caption, tag, name, category }) =>
+    where(
+      Posting._get({ post }).is({
+        user,
+        media,
+        caption,
+      }),
+    ).form({
+      post,
+      user,
+      media,
+      caption,
+
+      tags: each(
+        Tagging._tagsFor({ item: post }).is({
+          tag,
+          name,
+          category,
+        }),
+      ).form({
+        tag,
+        name,
+        category,
+      }),
+    }),
+);
+
+const SearchPost = endpoint(
+  "/search/post",
+  ({ post }) =>
+    receive({ post })
+      .then(
+        respond({
+          result: PostResult({ post }),
+        }),
+      ),
+);
+
 const SearchTag = endpoint(
   "/search/tag",
   ({ name, category, tag }) =>
@@ -54,6 +94,8 @@ const SearchTag = endpoint(
 export const searchComposition = {
   Search: {
     SearchTag,
+    SearchPost,
     ItemsForTag,
+    PostResult,
   },
 };
