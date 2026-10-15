@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from "vue";
+import { api } from "../api";
 
 defineEmits<{
   back: [];
@@ -84,7 +85,6 @@ const canCatalog = computed(() => {
 });
 
 const submitting = ref(false);
-
 async function catalogEdit() {
   if (!canCatalog.value) {
     return;
@@ -95,50 +95,32 @@ async function catalogEdit() {
 
   try {
     // 1. Create the post
-    const postResponse = await fetch(
-      "http://localhost:3000/api/catalog/post",
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          user: "amber",
-          media: media.value.trim(),
-          caption: caption.value.trim(),
-        }),
-      },
-    );
+    const postResult = await api.catalog.post({
+      user: "amber",
+      media: media.value.trim(),
+      caption: caption.value.trim(),
+    });
 
-    if (!postResponse.ok) {
-      message.value = "Could not create the post.";
-      return;
-    }
+    if ("error" in postResult) {
+  message.value = `Could not create the post: ${postResult.error}`;
+  return;
+}
 
-    const postResult = await postResponse.json();
-    const post = postResult.post;
+const post = postResult.post;
 
     // 2. Attach every selected tag
     for (const tag of tags.value) {
-      const tagResponse = await fetch(
-        "http://localhost:3000/api/catalog/tag",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            post,
-            name: tag.name,
-            category: tag.category,
-          }),
-        },
-      );
+      const tagResult = await api.catalog.tag({
+        post,
+        name: tag.name,
+        category: tag.category,
+      });
 
-      if (!tagResponse.ok) {
-        message.value = `Post created, but "${tag.name}" could not be attached.`;
-        return;
-      }
+      if ("error" in tagResult) {
+  message.value =
+    `Post created, but "${tag.name}" could not be attached: ${tagResult.error}`;
+  return;
+}
     }
 
     // 3. Everything worked

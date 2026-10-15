@@ -1,14 +1,14 @@
 import type { Collection, Db} from "mongodb"; 
 
 
-export interface Post<User, Item> {
+export interface Post<User extends string, Item extends string> {
     _id: string; 
     author: User; 
     media: Item; 
     caption: string; 
 }
 
-export class PostingConcept<User, Item> {
+export class PostingConcept<User extends string, Item extends string> {
     private readonly posts: Collection<Post<User, Item>>;
     constructor(db: Db) {
         this.posts = db.collection<Post<User, Item>>("posting.posts"); 

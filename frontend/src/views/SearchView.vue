@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from "vue";
+import { api } from "../api";
 
 defineEmits<{
   back: [];
@@ -107,30 +108,21 @@ async function search() {
     // Maps each matching Post ID to the number of searched tags it matched.
     const matchCounts = new Map<string, number>();
 
-    // Search the backend once for each selected tag.
+    // Search once for each selected tag.
     for (const tag of selectedTags.value) {
-      const response = await fetch(
-        "http://localhost:3000/api/search/tag",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            name: tag.name,
-            category: tag.category,
-          }),
-        },
-      );
+      const tagResult = await api.search.tag({
+        name: tag.name,
+        category: tag.category,
+      });
 
-      if (!response.ok) {
-        throw new Error(`Search failed for tag "${tag.name}"`);
+      if ("error" in tagResult) {
+        throw new Error(
+          `Search failed for tag "${tag.name}": ${tagResult.error}`,
+        );
       }
 
-      const data = await response.json();
-
       // Count how many selected tags matched each Post.
-      for (const item of data.results.items) {
+      for (const item of tagResult.results.items) {
         const oldCount = matchCounts.get(item.item) ?? 0;
         matchCounts.set(item.item, oldCount + 1);
       }
@@ -140,32 +132,23 @@ async function search() {
 
     // Get the actual Post details and all associated tags.
     for (const [post, matches] of matchCounts) {
-      const response = await fetch(
-        "http://localhost:3000/api/search/post",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            post,
-          }),
-        },
-      );
+      const postResult = await api.search.post({
+        post,
+      });
 
-      if (!response.ok) {
-        throw new Error(`Could not retrieve post "${post}"`);
+      if ("error" in postResult) {
+        throw new Error(
+          `Could not retrieve post "${post}": ${postResult.error}`,
+        );
       }
 
-      const data = await response.json();
-
       foundResults.push({
-        ...data.result,
+        ...postResult.result,
         matches,
       });
     }
 
-    // Most matching tags first.
+    // Posts matching the most searched tags appear first.
     foundResults.sort((a, b) => b.matches - a.matches);
 
     results.value = foundResults;
@@ -177,7 +160,12 @@ async function search() {
     }
   } catch (error) {
     console.error(error);
-    message.value = "Search failed.";
+
+    if (error instanceof Error) {
+      message.value = error.message;
+    } else {
+      message.value = "Search failed.";
+    }
   } finally {
     searching.value = false;
   }

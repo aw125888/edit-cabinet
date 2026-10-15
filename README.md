@@ -10,3 +10,4 @@ EDIT CABINET is a detailed archive for edits that preserves their context and le
 
 - [User Journey](user-journey.md)
 - [Design Notes](design-notes.md)
+- [MVP Demo](MVPDemo.MOV)

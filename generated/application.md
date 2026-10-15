@@ -18,6 +18,10 @@ Defined in [Posting](../design/concepts/posting.md), line 1.
 - `deletePost(post: Post) : returns ()`
 - `editCaption(post: Post, caption: String) : returns ()`
 
+#### Queries
+
+- `_get(post: Post) : optional (user: User, media: Item, caption: String)`
+
 #### Instances
 
 - `Posting` — instance of `Posting` — [EDIT CABINET Types](../design/types.md), line 15.
@@ -39,6 +43,7 @@ Defined in [Tagging](../design/concepts/Tagging.md), line 1.
 
 - `_itemsFor(tag: Tag) : many (item: Item)`
 - `_findTag(name: String, category: Category) : optional (tag: Tag)`
+- `_tagsFor(item: Item) : many (tag: Tag, name: String, category: Category)`
 
 #### Instances
 
@@ -53,6 +58,44 @@ Concrete types:
 - `Account` — [EDIT CABINET Types](../design/types.md), line 4.
 - `TagCategory` — [EDIT CABINET Types](../design/types.md), line 10.
 - `Video` — [EDIT CABINET Types](../design/types.md), line 7.
+
+## Formers
+
+_Formers name result shapes evaluated when asked. The source former owns_
+_the authored explanation; this section records the generated shape._
+
+### the items for tag (tag)
+
+Authored path: `Search.ItemsForTag`.
+- Covered by [Search](../design/compositions/Search.md), line 5.
+
+```former
+Former "the items for tag (tag)" — inputs (tag); bindings (item); promises exactly one record — forms:
+  a record of
+    items: each Tagging._itemsFor (tag) has (item)
+      form a record of
+        item
+```
+
+### the search result for post (post)
+
+Authored path: `Search.PostResult`.
+- Covered by [Search](../design/compositions/Search.md), line 9.
+
+```former
+Former "the search result for post (post)" — inputs (post); bindings (user, media, caption, tag, name, category); promises exactly one record — forms:
+  a record of
+    where Posting._get (post) has (caption, media, user)
+    caption
+    media
+    post
+    tags: each Tagging._tagsFor (item: post) has (category, name, tag)
+      form a record of
+        category
+        name
+        tag
+    user
+```
 
 ## Reactions
 
@@ -172,6 +215,46 @@ then
   RequestBoundary.respond (error: message, requestId)
 ```
 
+### Search.SearchPost
+
+Authored path: `Search.SearchPost`.
+- Covered by [Search](../design/compositions/Search.md), line 7.
+- Covered by [Search](../design/compositions/Search.md), line 13.
+
+```reaction
+when RequestBoundary.request (path: "/search/post", post, requestId)
+then
+  RequestBoundary.respond (requestId, result: former "the search result for post (post)" with (post))
+```
+
+### Search.SearchTag:tag-exists
+
+Authored path: `Search.SearchTag`.
+- Covered by [Search](../design/compositions/Search.md), line 3.
+- Covered by [Search](../design/compositions/Search.md), line 12.
+
+```reaction
+when RequestBoundary.request (category, name, path: "/search/tag", requestId)
+where
+  Tagging._findTag (category, name) has (tag)
+then
+  RequestBoundary.respond (requestId, results: former "the items for tag (tag)" with (tag))
+```
+
+### Search.SearchTag:tag-missing
+
+Authored path: `Search.SearchTag`.
+- Covered by [Search](../design/compositions/Search.md), line 3.
+- Covered by [Search](../design/compositions/Search.md), line 12.
+
+```reaction
+when RequestBoundary.request (category, name, path: "/search/tag", requestId)
+where
+  no Tagging._findTag (category, name)
+then
+  RequestBoundary.respond (requestId, results: (items: []))
+```
+
 ## Endpoint input contracts
 
 Before recording an action ask, the boundary rejects a body that is not an
@@ -181,3 +264,5 @@ not listed here have no explicit input contract.
 
 - `/catalog/post` — requires `caption`, `media`, `user`
 - `/catalog/tag` — requires `category`, `name`, `post`
+- `/search/post` — requires `post`
+- `/search/tag` — requires `category`, `name`
