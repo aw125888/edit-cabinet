@@ -4,8 +4,9 @@ import { ref } from "vue";
 import HomeView from "./views/HomeView.vue";
 import CatalogView from "./views/CatalogView.vue";
 import SearchView from "./views/SearchView.vue";
+import CabinetView from "./views/CabinetView.vue";
 
-type View = "home" | "catalog" | "search";
+type View = "home" | "catalog" | "search" | "cabinet";
 
 const currentView = ref<View>("home");
 </script>
@@ -15,6 +16,7 @@ const currentView = ref<View>("home");
     v-if="currentView === 'home'"
     @catalog="currentView = 'catalog'"
     @search="currentView = 'search'"
+    @cabinet="currentView = 'cabinet'"
   />
 
   <CatalogView
@@ -23,6 +25,11 @@ const currentView = ref<View>("home");
   />
 
   <SearchView
+    v-else-if="currentView === 'search'"
+    @back="currentView = 'home'"
+  />
+
+  <CabinetView
     v-else
     @back="currentView = 'home'"
   />

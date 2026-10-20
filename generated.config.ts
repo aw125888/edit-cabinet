@@ -14,6 +14,7 @@ export default {
       new URL("./design/types.md", import.meta.url),
       new URL("./design/compositions/Catalog.md", import.meta.url),
       new URL("./design/compositions/Search.md", import.meta.url),
+      new URL("./design/compositions/Slot.md", import.meta.url),
     ],
   },
 

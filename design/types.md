@@ -19,5 +19,11 @@ instantiate Posting with
 instantiate Tagging with 
     Item is Posting.Post 
     Category is TagCategory
+
+instantiate Collecting with
+  User is Account
+  Item is Posting.Post
 ```
+
+
 

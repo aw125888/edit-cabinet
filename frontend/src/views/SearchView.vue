@@ -38,6 +38,16 @@ interface SearchResult {
   matches: number;
 }
 
+interface Folder {
+  folder: string;
+  name: string;
+}
+
+const folders = ref<Folder[]>([]);
+const slottingPost = ref<string | null>(null);
+const newFolderName = ref("");
+const slotMessage = ref("");
+
 const selectedTags = ref<SearchTag[]>([]);
 
 const tagInputs = ref<Record<Category, string>>({
@@ -55,6 +65,75 @@ const message = ref("");
 const searching = ref(false);
 
 const canSearch = computed(() => selectedTags.value.length >= 1);
+
+async function loadFolders() {
+  const result = await api.slot.folders({
+    user: "amber",
+  });
+
+  if ("error" in result) {
+    throw new Error(`Could not load folders: ${result.error}`);
+  }
+
+  folders.value = result.result.folders;
+}
+
+async function openSlot(post: string) {
+  slottingPost.value = post;
+  slotMessage.value = "";
+
+  try {
+    await loadFolders();
+  } catch (error) {
+    console.error(error);
+    slotMessage.value = "Could not load folders.";
+  }
+}
+
+function closeSlot() {
+  slottingPost.value = null;
+  newFolderName.value = "";
+  slotMessage.value = "";
+}
+
+async function createFolder() {
+  const name = newFolderName.value.trim();
+
+  if (!name) {
+    return;
+  }
+
+  const result = await api.slot.folder.create({
+    user: "amber",
+    name,
+  });
+
+  if ("error" in result) {
+    slotMessage.value = `Could not create folder: ${result.error}`;
+    return;
+  }
+
+  newFolderName.value = "";
+  await loadFolders();
+}
+
+async function addPostToFolder(folder: string) {
+  if (slottingPost.value === null) {
+    return;
+  }
+
+  const result = await api.slot.add({
+    folder,
+    post: slottingPost.value,
+  });
+
+  if ("error" in result) {
+    slotMessage.value = `Could not slot edit: ${result.error}`;
+    return;
+  }
+
+  slotMessage.value = "Edit slotted!";
+}
 
 function tagsFor(category: Category) {
   return selectedTags.value.filter(
@@ -275,6 +354,62 @@ async function search() {
             {{ tag.name }} — {{ tag.category }}
           </li>
         </ul>
+        <button
+  type="button"
+  @click="openSlot(result.post)"
+>
+  Slot
+</button>
+
+<div v-if="slottingPost === result.post">
+  <h4>Slot this edit</h4>
+
+  <p v-if="folders.length === 0">
+    You don't have any folders yet.
+  </p>
+
+  <ul>
+    <li
+      v-for="folder in folders"
+      :key="folder.folder"
+    >
+      {{ folder.name }}
+
+      <button
+        type="button"
+        @click="addPostToFolder(folder.folder)"
+      >
+        Add here
+      </button>
+    </li>
+  </ul>
+
+  <div>
+    <input
+      v-model="newFolderName"
+      type="text"
+      placeholder="New folder name"
+      @keyup.enter="createFolder"
+    />
+
+    <button
+      type="button"
+      @click="createFolder"
+    >
+      Create Folder
+    </button>
+  </div>
+
+  <p>{{ slotMessage }}</p>
+
+  <button
+    type="button"
+    @click="closeSlot"
+  >
+    Cancel
+  </button>
+</div>
+        
       </article>
     </section>
   </main>

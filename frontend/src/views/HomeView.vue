@@ -2,6 +2,7 @@
 defineEmits<{
   catalog: [];
   search: [];
+  cabinet: [];
 }>();
 </script>
 
@@ -11,12 +12,25 @@ defineEmits<{
 
     <p>Catalog and find video edits.</p>
 
-    <button @click="$emit('catalog')">
+    <button
+      type="button"
+      @click="$emit('catalog')"
+    >
       Catalog
     </button>
 
-    <button @click="$emit('search')">
+    <button
+      type="button"
+      @click="$emit('search')"
+    >
       Search
+    </button>
+
+    <button
+      type="button"
+      @click="$emit('cabinet')"
+    >
+      My Cabinet
     </button>
   </main>
 </template>

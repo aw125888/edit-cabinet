@@ -75,6 +75,81 @@ export type ApplicationWire = {
     };
     error: { error: AppWideError | "INVALID_INPUT" };
   };
+  "/slot/add": {
+    input: {
+      "folder": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Collecting"]["addToFolder"]>[0], ["folder"]>>;
+      "post": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Collecting"]["addToFolder"]>[0], ["item"]>>;
+    };
+    output: {
+      "entry": Jsonify<AtPath<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Collecting"]["addToFolder"]>>, ["entry"]>>;
+    };
+    error: { error: AppWideError | "INVALID_INPUT" };
+  };
+  "/slot/folder": {
+    input: {
+      "folder": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Collecting"]["_itemsIn"]>[0], ["folder"]>>;
+    };
+    output: {
+      "result": {
+        "items": {
+          "details": {
+            "caption": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Posting"]["_get"]>>>, ["caption"]>>;
+            "media": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Posting"]["_get"]>>>, ["media"]>>;
+            "user": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Posting"]["_get"]>>>, ["user"]>>;
+          };
+          "post": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Collecting"]["_itemsIn"]>>>, ["item"]>>;
+        }[];
+      };
+    };
+    error: { error: AppWideError | "INVALID_INPUT" };
+  };
+  "/slot/folder/create": {
+    input: {
+      "name": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Collecting"]["createFolder"]>[0], ["name"]>>;
+      "user": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Collecting"]["createFolder"]>[0], ["user"]>>;
+    };
+    output: {
+      "folder": Jsonify<AtPath<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Collecting"]["createFolder"]>>, ["folder"]>>;
+    };
+    error: { error: AppWideError | "INVALID_INPUT" };
+  };
+  "/slot/folder/delete": {
+    input: {
+      "folder": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Collecting"]["deleteFolder"]>[0], ["folder"]>>;
+    };
+    output: Record<string, never>;
+    error: { error: AppWideError | "INVALID_INPUT" };
+  };
+  "/slot/folder/rename": {
+    input: {
+      "folder": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Collecting"]["renameFolder"]>[0], ["folder"]>>;
+      "name": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Collecting"]["renameFolder"]>[0], ["name"]>>;
+    };
+    output: Record<string, never>;
+    error: { error: AppWideError | "INVALID_INPUT" };
+  };
+  "/slot/folders": {
+    input: {
+      "user": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Collecting"]["_foldersFor"]>[0], ["user"]>>;
+    };
+    output: {
+      "result": {
+        "folders": {
+          "folder": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Collecting"]["_foldersFor"]>>>, ["folder"]>>;
+          "name": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Collecting"]["_foldersFor"]>>>, ["name"]>>;
+        }[];
+      };
+    };
+    error: { error: AppWideError | "INVALID_INPUT" };
+  };
+  "/slot/remove": {
+    input: {
+      "folder": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Collecting"]["removeFromFolder"]>[0], ["folder"]>>;
+      "post": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Collecting"]["removeFromFolder"]>[0], ["item"]>>;
+    };
+    output: Record<string, never>;
+    error: { error: AppWideError | "INVALID_INPUT" };
+  };
 };
 
 export type HttpAppWideError = never;
@@ -139,6 +214,81 @@ export type ApplicationWireHttp = {
         "items": never[];
       };
     };
+    error: { error: HttpAppWideError | "INVALID_REQUEST" };
+  };
+  "/slot/add": {
+    input: {
+      "folder": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Collecting"]["addToFolder"]>[0], ["folder"]>>;
+      "post": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Collecting"]["addToFolder"]>[0], ["item"]>>;
+    };
+    output: {
+      "entry": Jsonify<AtPath<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Collecting"]["addToFolder"]>>, ["entry"]>>;
+    };
+    error: { error: HttpAppWideError | "INVALID_REQUEST" };
+  };
+  "/slot/folder": {
+    input: {
+      "folder": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Collecting"]["_itemsIn"]>[0], ["folder"]>>;
+    };
+    output: {
+      "result": {
+        "items": {
+          "details": {
+            "caption": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Posting"]["_get"]>>>, ["caption"]>>;
+            "media": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Posting"]["_get"]>>>, ["media"]>>;
+            "user": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Posting"]["_get"]>>>, ["user"]>>;
+          };
+          "post": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Collecting"]["_itemsIn"]>>>, ["item"]>>;
+        }[];
+      };
+    };
+    error: { error: HttpAppWideError | "INVALID_REQUEST" };
+  };
+  "/slot/folder/create": {
+    input: {
+      "name": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Collecting"]["createFolder"]>[0], ["name"]>>;
+      "user": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Collecting"]["createFolder"]>[0], ["user"]>>;
+    };
+    output: {
+      "folder": Jsonify<AtPath<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Collecting"]["createFolder"]>>, ["folder"]>>;
+    };
+    error: { error: HttpAppWideError | "INVALID_REQUEST" };
+  };
+  "/slot/folder/delete": {
+    input: {
+      "folder": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Collecting"]["deleteFolder"]>[0], ["folder"]>>;
+    };
+    output: Record<string, never>;
+    error: { error: HttpAppWideError | "INVALID_REQUEST" };
+  };
+  "/slot/folder/rename": {
+    input: {
+      "folder": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Collecting"]["renameFolder"]>[0], ["folder"]>>;
+      "name": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Collecting"]["renameFolder"]>[0], ["name"]>>;
+    };
+    output: Record<string, never>;
+    error: { error: HttpAppWideError | "INVALID_REQUEST" };
+  };
+  "/slot/folders": {
+    input: {
+      "user": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Collecting"]["_foldersFor"]>[0], ["user"]>>;
+    };
+    output: {
+      "result": {
+        "folders": {
+          "folder": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Collecting"]["_foldersFor"]>>>, ["folder"]>>;
+          "name": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Collecting"]["_foldersFor"]>>>, ["name"]>>;
+        }[];
+      };
+    };
+    error: { error: HttpAppWideError | "INVALID_REQUEST" };
+  };
+  "/slot/remove": {
+    input: {
+      "folder": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Collecting"]["removeFromFolder"]>[0], ["folder"]>>;
+      "post": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Collecting"]["removeFromFolder"]>[0], ["item"]>>;
+    };
+    output: Record<string, never>;
     error: { error: HttpAppWideError | "INVALID_REQUEST" };
   };
 };

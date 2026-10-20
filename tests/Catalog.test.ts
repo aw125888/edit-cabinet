@@ -27,6 +27,7 @@ beforeEach(async () => {
     initialize: {
       Posting: [testDb.db],
       Tagging: [testDb.db],
+      Collecting: [testDb.db],
     },
   });
 });
