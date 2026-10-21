@@ -2,19 +2,30 @@ import { endpoint, receive, respond } from "@mit-sdg/sync-engine/boundary";
 import { no, where } from "@mit-sdg/sync-engine/language";
 import { concepts } from "../concepts.ts";
 
-const { Posting, Tagging} = concepts;
+const { Posting, Tagging, Sessioning} = concepts;
 
 const CreateCatalogPost = endpoint(
   "/catalog/post",
-  ({ user, media, caption, post }) =>
-    receive({ user, media, caption })
+  ({ session, user, media, caption, post }) =>
+    receive({ session, media, caption })
       .then(
-        Posting.createPost({ user, media, caption })
-          .responds({ post })
+        Sessioning.use({
+          session,
+        }).responds({
+          subject: user,
+        }),
       )
-      .then(respond({ post })),
+      .then(
+        Posting.createPost({
+          user,
+          media,
+          caption,
+        }).responds({ post }),
+      )
+      .then(
+        respond({ post }),
+      ),
 );
-
 const AttachCatalogTag = endpoint(
   "/catalog/tag",
   ({

@@ -8,12 +8,13 @@ import {
   each,
   form,
   former,
+  no,
   where,
 } from "@mit-sdg/sync-engine/language";
 
 import { concepts } from "../concepts.ts";
 
-const { Posting, Collecting } = concepts;
+const { Posting, Collecting, Sessioning } = concepts;
 
 const UserFolders = former(
   "the folders for user (user)",
@@ -29,17 +30,6 @@ const UserFolders = former(
         name,
       }),
     }),
-);
-
-const GetFolders = endpoint(
-  "/slot/folders",
-  ({ user }) =>
-    receive({ user })
-      .then(
-        respond({
-          result: UserFolders({ user }),
-        }),
-      ),
 );
 
 const FolderContents = former(
@@ -66,88 +56,292 @@ const FolderContents = former(
     }),
 );
 
-const GetFolder = endpoint(
-  "/slot/folder",
-  ({ folder }) =>
-    receive({ folder })
+/**
+ * Returns all folders belonging to the signed-in user.
+ */
+const GetFolders = endpoint(
+  "/slot/folders",
+  ({ session, user }) =>
+    receive({ session })
+      .then(
+        Sessioning.use({
+          session,
+        }).responds({
+          subject: user,
+        }),
+      )
       .then(
         respond({
-          result: FolderContents({ folder }),
+          result: UserFolders({ user }),
         }),
       ),
 );
 
+/**
+ * Returns a folder's contents only when the folder
+ * belongs to the signed-in user.
+ */
+const GetFolder = endpoint(
+  "/slot/folder",
+  ({ session, user, folder }) =>
+    receive({ session, folder })
+      .then(
+        Sessioning.use({
+          session,
+        }).responds({
+          subject: user,
+        }),
+      )
+      .then(
+        where(
+          Collecting._foldersFor({ user }).is({
+            folder,
+          }),
+        )
+          .then(
+            respond({
+              result: FolderContents({ folder }),
+            }),
+          )
+          .named("owned"),
+
+        where(
+          no(
+            Collecting._foldersFor({ user }).is({
+              folder,
+            }),
+          ),
+        )
+          .then(
+            respond({
+              error: "FORBIDDEN",
+            }),
+          )
+          .named("not-owned"),
+      ),
+);
+
+/**
+ * Creates a folder owned by the signed-in user.
+ */
 const CreateFolder = endpoint(
   "/slot/folder/create",
-  ({ user, name, folder }) =>
-    receive({ user, name })
+  ({ session, user, name, folder }) =>
+    receive({ session, name })
+      .then(
+        Sessioning.use({
+          session,
+        }).responds({
+          subject: user,
+        }),
+      )
       .then(
         Collecting.createFolder({
           user,
           name,
-        }).responds({ folder }),
+        }).responds({
+          folder,
+        }),
       )
       .then(
-        respond({ folder }),
+        respond({
+          folder,
+        }),
       ),
 );
 
+/**
+ * Adds a Post only to a folder belonging to
+ * the signed-in user.
+ */
 const AddToFolder = endpoint(
   "/slot/add",
-  ({ folder, post, entry }) =>
-    receive({ folder, post })
+  ({ session, user, folder, post, entry }) =>
+    receive({ session, folder, post })
       .then(
-        Collecting.addToFolder({
-          folder,
-          item: post,
-        }).responds({ entry }),
+        Sessioning.use({
+          session,
+        }).responds({
+          subject: user,
+        }),
       )
       .then(
-        respond({ entry }),
+        where(
+          Collecting._foldersFor({ user }).is({
+            folder,
+          }),
+        )
+          .then(
+            Collecting.addToFolder({
+              folder,
+              item: post,
+            }).responds({
+              entry,
+            }),
+          )
+          .then(
+            respond({
+              entry,
+            }),
+          )
+          .named("owned"),
+
+        where(
+          no(
+            Collecting._foldersFor({ user }).is({
+              folder,
+            }),
+          ),
+        )
+          .then(
+            respond({
+              error: "FORBIDDEN",
+            }),
+          )
+          .named("not-owned"),
       ),
 );
 
+/**
+ * Removes a Post only from a folder belonging
+ * to the signed-in user.
+ */
 const RemoveFromFolder = endpoint(
   "/slot/remove",
-  ({ folder, post }) =>
-    receive({ folder, post })
+  ({ session, user, folder, post }) =>
+    receive({ session, folder, post })
       .then(
-        Collecting.removeFromFolder({
-          folder,
-          item: post,
+        Sessioning.use({
+          session,
+        }).responds({
+          subject: user,
         }),
       )
       .then(
-        respond({}),
+        where(
+          Collecting._foldersFor({ user }).is({
+            folder,
+          }),
+        )
+          .then(
+            Collecting.removeFromFolder({
+              folder,
+              item: post,
+            }),
+          )
+          .then(
+            respond({}),
+          )
+          .named("owned"),
+
+        where(
+          no(
+            Collecting._foldersFor({ user }).is({
+              folder,
+            }),
+          ),
+        )
+          .then(
+            respond({
+              error: "FORBIDDEN",
+            }),
+          )
+          .named("not-owned"),
       ),
 );
 
+/**
+ * Renames only a folder belonging to the
+ * signed-in user.
+ */
 const RenameFolder = endpoint(
   "/slot/folder/rename",
-  ({ folder, name }) =>
-    receive({ folder, name })
+  ({ session, user, folder, name }) =>
+    receive({ session, folder, name })
       .then(
-        Collecting.renameFolder({
-          folder,
-          name,
+        Sessioning.use({
+          session,
+        }).responds({
+          subject: user,
         }),
       )
       .then(
-        respond({}),
+        where(
+          Collecting._foldersFor({ user }).is({
+            folder,
+          }),
+        )
+          .then(
+            Collecting.renameFolder({
+              folder,
+              name,
+            }),
+          )
+          .then(
+            respond({}),
+          )
+          .named("owned"),
+
+        where(
+          no(
+            Collecting._foldersFor({ user }).is({
+              folder,
+            }),
+          ),
+        )
+          .then(
+            respond({
+              error: "FORBIDDEN",
+            }),
+          )
+          .named("not-owned"),
       ),
 );
 
+/**
+ * Deletes only a folder belonging to the
+ * signed-in user.
+ */
 const DeleteFolder = endpoint(
   "/slot/folder/delete",
-  ({ folder }) =>
-    receive({ folder })
+  ({ session, user, folder }) =>
+    receive({ session, folder })
       .then(
-        Collecting.deleteFolder({
-          folder,
+        Sessioning.use({
+          session,
+        }).responds({
+          subject: user,
         }),
       )
       .then(
-        respond({}),
+        where(
+          Collecting._foldersFor({ user }).is({
+            folder,
+          }),
+        )
+          .then(
+            Collecting.deleteFolder({
+              folder,
+            }),
+          )
+          .then(
+            respond({}),
+          )
+          .named("owned"),
+
+        where(
+          no(
+            Collecting._foldersFor({ user }).is({
+              folder,
+            }),
+          ),
+        )
+          .then(
+            respond({
+              error: "FORBIDDEN",
+            }),
+          )
+          .named("not-owned"),
       ),
 );
 
@@ -157,7 +351,6 @@ export const slotComposition = {
     AddToFolder,
     GetFolders,
     GetFolder,
-
     UserFolders,
     FolderContents,
     RemoveFromFolder,
@@ -165,4 +358,3 @@ export const slotComposition = {
     DeleteFolder,
   },
 };
-

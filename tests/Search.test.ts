@@ -18,15 +18,15 @@ beforeEach(async () => {
 
   app = assemble({
     conceptSet: applicationConceptSet,
+
     composition: {
       ...catalogComposition,
       ...searchComposition,
     },
-    initialize: {
-      Posting: [testDb.db],
-      Tagging: [testDb.db],
-      Collecting: [testDb.db],
-    },
+
+    instances: applicationConceptSet.implementations("mongo", {
+      database: testDb.db,
+    }),
   });
 });
 
@@ -70,25 +70,22 @@ test("searching an existing tag returns its associated post", async () => {
 
   expect(searchResult.ok).toBe(true);
 
-  expect(searchResult.ok).toBe(true);
+  if (
+    !searchResult.ok ||
+    typeof searchResult.value !== "object" ||
+    searchResult.value === null ||
+    !("results" in searchResult.value)
+  ) {
+    throw new Error("Expected search results");
+  }
 
-if (
-  !searchResult.ok ||
-  typeof searchResult.value !== "object" ||
-  searchResult.value === null ||
-  !("results" in searchResult.value)
-) {
-  throw new Error("Expected search results");
-}
+  const results = searchResult.value.results as {
+    items: { item: string }[];
+  };
 
-const results = searchResult.value.results as {
-  items: { item: string }[];
-};
-
-expect(results.items).toHaveLength(1);
-expect(results.items[0]?.item).toBe(post);
+  expect(results.items).toHaveLength(1);
+  expect(results.items[0]?.item).toBe(post);
 });
-
 
 test("searching a nonexistent tag returns no posts", async () => {
   const result = await app.invoker.invoke("/search/tag", {
@@ -113,8 +110,6 @@ test("searching a nonexistent tag returns no posts", async () => {
 
   expect(results.items).toEqual([]);
 });
-
-
 
 test("search post returns post details and all associated tags", async () => {
   const postResult = await app.invoker.invoke("/catalog/post", {
@@ -154,43 +149,43 @@ test("search post returns post details and all associated tags", async () => {
   expect(result.ok).toBe(true);
 
   if (
-  !result.ok ||
-  typeof result.value !== "object" ||
-  result.value === null ||
-  !("result" in result.value)
-) {
-  throw new Error("Expected a search post result");
-}
+    !result.ok ||
+    typeof result.value !== "object" ||
+    result.value === null ||
+    !("result" in result.value)
+  ) {
+    throw new Error("Expected a search post result");
+  }
 
-const searchPost = result.value.result as {
-  post: string;
-  user: string;
-  media: string;
-  caption: string;
-  tags: {
-    tag: string;
-    name: string;
-    category: string;
-  }[];
-};
+  const searchPost = result.value.result as {
+    post: string;
+    user: string;
+    media: string;
+    caption: string;
+    tags: {
+      tag: string;
+      name: string;
+      category: string;
+    }[];
+  };
 
-expect(searchPost.post).toBe(post);
-expect(searchPost.user).toBe("amber");
-expect(searchPost.media).toBe("https://example.com/video.mp4");
-expect(searchPost.caption).toBe("Daenerys edit");
+  expect(searchPost.post).toBe(post);
+  expect(searchPost.user).toBe("amber");
+  expect(searchPost.media).toBe("https://example.com/video.mp4");
+  expect(searchPost.caption).toBe("Daenerys edit");
 
-expect(searchPost.tags).toEqual(
-  expect.arrayContaining([
-    expect.objectContaining({
-      name: "Girlhood",
-      category: "Aesthetic/Concept",
-    }),
-    expect.objectContaining({
-      name: "Daenerys Targaryen",
-      category: "Characters",
-    }),
-  ]),
-);
+  expect(searchPost.tags).toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({
+        name: "Girlhood",
+        category: "Aesthetic/Concept",
+      }),
+      expect.objectContaining({
+        name: "Daenerys Targaryen",
+        category: "Characters",
+      }),
+    ]),
+  );
 
-expect(searchPost.tags).toHaveLength(2);
+  expect(searchPost.tags).toHaveLength(2);
 });
