@@ -40,7 +40,8 @@ interface ManagedPost {
 type MessageType =
   | "normal"
   | "success"
-  | "delete";
+  | "delete"
+  | "error";
 
 const posts = ref<ManagedPost[]>([]);
 const loading = ref(true);
@@ -52,20 +53,17 @@ const messageVisible = ref(false);
 
 const editingPost =
   ref<string | null>(null);
+
 const editedCaption = ref("");
 
-/*
- * Which cards currently have their
- * Add Tags controls expanded.
- */
 const editingTags =
   ref<Set<string>>(new Set());
 
-/*
- * Each post gets its own set of tag inputs.
- */
 const tagInputs = ref<
-  Record<string, Record<Category, string>>
+  Record<
+    string,
+    Record<Category, string>
+  >
 >({});
 
 let messageTimer:
@@ -76,7 +74,12 @@ let fadeTimer:
   | ReturnType<typeof setTimeout>
   | undefined;
 
-function emptyTagInputs(): Record<Category, string> {
+/* ==============================
+   HELPERS
+   ============================== */
+
+function emptyTagInputs():
+  Record<Category, string> {
   return {
     "Aesthetic/Concept": "",
     "Media": "",
@@ -88,7 +91,9 @@ function emptyTagInputs(): Record<Category, string> {
   };
 }
 
-function categoryLabel(category: Category) {
+function categoryLabel(
+  category: Category,
+) {
   switch (category) {
     case "Aesthetic/Concept":
       return "Aesthetic";
@@ -103,6 +108,10 @@ function categoryLabel(category: Category) {
       return category;
   }
 }
+
+/* ==============================
+   MESSAGES
+   ============================== */
 
 function clearMessageTimers() {
   if (messageTimer !== undefined) {
@@ -136,7 +145,10 @@ function showPermanentMessage(
 
 function showTemporaryMessage(
   text: string,
-  type: "success" | "delete",
+  type:
+    | "success"
+    | "delete"
+    | "error",
 ) {
   clearMessageTimers();
 
@@ -157,6 +169,28 @@ function showTemporaryMessage(
   }, 2500);
 }
 
+function friendlyError(
+  error: string,
+) {
+  switch (error) {
+    case "FORBIDDEN":
+      return "You don't have permission to edit this post.";
+
+    case "UNAUTHORIZED":
+      return "Please sign in again.";
+
+    case "INVALID_REQUEST":
+      return "That request could not be completed.";
+
+    default:
+      return "Something went wrong. Please try again.";
+  }
+}
+
+/* ==============================
+   POSTS
+   ============================== */
+
 async function loadPosts() {
   loading.value = true;
   clearMessage();
@@ -166,19 +200,17 @@ async function loadPosts() {
       await api.manage.posts({});
 
     if ("error" in result) {
-      showPermanentMessage(
-        `Could not load your edits: ${result.error}`,
+      showTemporaryMessage(
+        friendlyError(result.error),
+        "error",
       );
+
       return;
     }
 
     posts.value =
       result.result.posts as ManagedPost[];
 
-    /*
-     * Give every loaded post its own
-     * independent tag inputs.
-     */
     for (const post of posts.value) {
       if (!tagInputs.value[post.post]) {
         tagInputs.value[post.post] =
@@ -194,8 +226,9 @@ async function loadPosts() {
   } catch (error) {
     console.error(error);
 
-    showPermanentMessage(
-      "Could not load your edits.",
+    showTemporaryMessage(
+      "Could not load your edits. Please try again.",
+      "error",
     );
   } finally {
     loading.value = false;
@@ -233,9 +266,11 @@ async function saveCaption(
     });
 
   if ("error" in result) {
-    showPermanentMessage(
-      `Could not update caption: ${result.error}`,
+    showTemporaryMessage(
+      friendlyError(result.error),
+      "error",
     );
+
     return;
   }
 
@@ -259,7 +294,8 @@ function tagsFor(
   category: Category,
 ) {
   return post.tags.filter(
-    (tag) => tag.category === category,
+    (tag) =>
+      tag.category === category,
   );
 }
 
@@ -283,6 +319,46 @@ function toggleTagEditor(
   editingTags.value = next;
 }
 
+/*
+ * Keep nested tag-input access out of
+ * the Vue template so TypeScript can
+ * type-check Category correctly.
+ */
+function tagInputValue(
+  post: ManagedPost,
+  category: Category,
+) {
+  return (
+    tagInputs.value[
+      post.post
+    ]?.[category] ?? ""
+  );
+}
+
+function updateTagInput(
+  post: ManagedPost,
+  category: Category,
+  event: Event,
+) {
+  if (!tagInputs.value[post.post]) {
+    tagInputs.value[post.post] =
+      emptyTagInputs();
+  }
+
+  const target =
+    event.target as HTMLInputElement;
+
+  const inputs =
+    tagInputs.value[post.post];
+
+  if (!inputs) {
+    return;
+  }
+
+  inputs[category] =
+    target.value;
+}
+
 async function addTag(
   post: ManagedPost,
   category: Category,
@@ -302,32 +378,40 @@ async function addTag(
   }
 
   /*
-   * Same 5-per-category rule as Catalog.
+   * Maximum five tags in one category.
    */
   if (
-    tagsFor(post, category).length >= 5
+    tagsFor(
+      post,
+      category,
+    ).length >= 5
   ) {
-    showPermanentMessage(
+    showTemporaryMessage(
       `You can add at most 5 tags to ${categoryLabel(category)}.`,
+      "error",
     );
+
     return;
   }
 
   /*
-   * Prevent duplicate name/category
-   * combinations in the UI.
+   * Prevent a duplicate tag before
+   * sending a backend request.
    */
-  const duplicate = post.tags.some(
-    (tag) =>
-      tag.category === category &&
-      tag.name.toLowerCase() ===
-        name.toLowerCase(),
-  );
+  const duplicate =
+    post.tags.some(
+      (tag) =>
+        tag.category === category &&
+        tag.name.toLowerCase() ===
+          name.toLowerCase(),
+    );
 
   if (duplicate) {
-    showPermanentMessage(
+    showTemporaryMessage(
       `"${name}" is already in ${categoryLabel(category)}.`,
+      "error",
     );
+
     return;
   }
 
@@ -339,16 +423,14 @@ async function addTag(
     });
 
   if ("error" in result) {
-    showPermanentMessage(
-      `Could not add tag: ${result.error}`,
+    showTemporaryMessage(
+      friendlyError(result.error),
+      "error",
     );
+
     return;
   }
 
-  /*
-   * Reload so the card gets the canonical
-   * assignment/tag IDs from the backend.
-   */
   inputs[category] = "";
 
   await refreshPosts();
@@ -364,13 +446,15 @@ async function removeTag(
   tag: ManagedTag,
 ) {
   /*
-   * A cataloged edit must retain
-   * at least one tag.
+   * An edit must always retain at
+   * least one tag.
    */
   if (post.tags.length <= 1) {
-    showPermanentMessage(
+    showTemporaryMessage(
       "An edit must have at least one tag.",
+      "error",
     );
+
     return;
   }
 
@@ -381,21 +465,20 @@ async function removeTag(
     });
 
   if ("error" in result) {
-    showPermanentMessage(
-      `Could not remove tag: ${result.error}`,
+    showTemporaryMessage(
+      friendlyError(result.error),
+      "error",
     );
+
     return;
   }
 
-  /*
-   * We can update this locally because
-   * removing a tag doesn't create any new IDs.
-   */
-  post.tags = post.tags.filter(
-    (existingTag) =>
-      existingTag.assignment !==
-      tag.assignment,
-  );
+  post.tags =
+    post.tags.filter(
+      (existingTag) =>
+        existingTag.assignment !==
+        tag.assignment,
+    );
 
   showTemporaryMessage(
     "Tag removed.",
@@ -403,19 +486,17 @@ async function removeTag(
   );
 }
 
-/*
- * Refresh posts without showing Loading...
- * or collapsing the tag editor.
- */
 async function refreshPosts() {
   try {
     const result =
       await api.manage.posts({});
 
     if ("error" in result) {
-      showPermanentMessage(
-        `Could not refresh your edits: ${result.error}`,
+      showTemporaryMessage(
+        friendlyError(result.error),
+        "error",
       );
+
       return;
     }
 
@@ -431,8 +512,9 @@ async function refreshPosts() {
   } catch (error) {
     console.error(error);
 
-    showPermanentMessage(
-      "Could not refresh your edits.",
+    showTemporaryMessage(
+      "Could not refresh your edits. Please try again.",
+      "error",
     );
   }
 }
@@ -444,9 +526,10 @@ async function refreshPosts() {
 async function deletePost(
   post: ManagedPost,
 ) {
-  const confirmed = window.confirm(
-    "Delete this edit? It will also be removed from any folders it has been saved to.",
-  );
+  const confirmed =
+    window.confirm(
+      "Delete this edit? It will also be removed from any folders it has been saved to.",
+    );
 
   if (!confirmed) {
     return;
@@ -458,28 +541,29 @@ async function deletePost(
     });
 
   if ("error" in result) {
-    showPermanentMessage(
-      `Could not delete edit: ${result.error}`,
+    showTemporaryMessage(
+      friendlyError(result.error),
+      "error",
     );
+
     return;
   }
 
-  posts.value = posts.value.filter(
-    (item) =>
-      item.post !== post.post,
-  );
+  posts.value =
+    posts.value.filter(
+      (item) =>
+        item.post !== post.post,
+    );
 
-  /*
-   * Clean up local UI state for
-   * the deleted post.
-   */
   const next =
     new Set(editingTags.value);
 
   next.delete(post.post);
   editingTags.value = next;
 
-  delete tagInputs.value[post.post];
+  delete tagInputs.value[
+    post.post
+  ];
 
   showTemporaryMessage(
     "Edit deleted.",
@@ -518,8 +602,9 @@ onBeforeUnmount(() => {
     </p>
 
     <!--
-      Permanent reserved message space,
-      so cards never jump when a reaction fades.
+      Fixed-height status area prevents
+      cards from moving when messages
+      appear and fade.
     -->
     <div class="status-area">
       <p
@@ -569,7 +654,8 @@ onBeforeUnmount(() => {
           <!-- CAPTION -->
           <div
             v-if="
-              editingPost !== post.post
+              editingPost !==
+              post.post
             "
             class="caption-row"
           >
@@ -619,6 +705,7 @@ onBeforeUnmount(() => {
               "
               v-model="editedCaption"
               type="text"
+              maxlength="200"
               @keyup.enter="
                 saveCaption(post)
               "
@@ -645,7 +732,12 @@ onBeforeUnmount(() => {
 
           <!-- CURRENT TAGS -->
           <div class="tags-section">
-            <p class="edit-label tags-label">
+            <p
+              class="
+                edit-label
+                tags-label
+              "
+            >
               Tags:
             </p>
 
@@ -669,7 +761,9 @@ onBeforeUnmount(() => {
                 </span>
 
                 <button
-                  class="remove-tag-button"
+                  class="
+                    remove-tag-button
+                  "
                   type="button"
                   :disabled="
                     post.tags.length <= 1
@@ -680,7 +774,10 @@ onBeforeUnmount(() => {
                       : 'Remove tag'
                   "
                   @click="
-                    removeTag(post, tag)
+                    removeTag(
+                      post,
+                      tag
+                    )
                   "
                 >
                   ×
@@ -697,7 +794,9 @@ onBeforeUnmount(() => {
                 )
               "
               @click="
-                toggleTagEditor(post)
+                toggleTagEditor(
+                  post
+                )
               "
             >
               {{
@@ -726,7 +825,9 @@ onBeforeUnmount(() => {
                 class="tag-editor-row"
               >
                 <label
-                  class="tag-editor-label"
+                  class="
+                    tag-editor-label
+                  "
                 >
                   {{
                     categoryLabel(
@@ -736,19 +837,42 @@ onBeforeUnmount(() => {
                 </label>
 
                 <input
-                  :value="tagInputs[post.post]?.[category] ?? ''"
-                  type="text"
-                  :placeholder="`Add ${categoryLabel(category)} tag`"
-                  :disabled="tagsFor(post, category).length >= 5"
-                  @input="
-                    tagInputs[post.post]![category] =
-                      ($event.target as HTMLInputElement).value
+                  :value="
+                    tagInputValue(
+                      post,
+                      category
+                    )
                   "
-                  @keyup.enter="addTag(post, category)"
+                  type="text"
+                  maxlength="50"
+                  :placeholder="
+                    `Add ${categoryLabel(category)} tag`
+                  "
+                  :disabled="
+                    tagsFor(
+                      post,
+                      category
+                    ).length >= 5
+                  "
+                  @input="
+                    updateTagInput(
+                      post,
+                      category,
+                      $event
+                    )
+                  "
+                  @keyup.enter="
+                    addTag(
+                      post,
+                      category
+                    )
+                  "
                 />
 
                 <button
-                  class="add-tag-button"
+                  class="
+                    add-tag-button
+                  "
                   type="button"
                   :disabled="
                     tagsFor(
@@ -814,6 +938,8 @@ onBeforeUnmount(() => {
   font-size: 3rem;
   font-weight: 400;
   line-height: 1;
+
+  color: rgb(45, 0, 128);
 }
 
 .loading-message {
@@ -838,9 +964,11 @@ onBeforeUnmount(() => {
   margin: 0;
 
   text-align: center;
+
   opacity: 1;
 
-  transition: opacity 0.8s ease;
+  transition:
+    opacity 0.8s ease;
 }
 
 .status-normal {
@@ -852,6 +980,10 @@ onBeforeUnmount(() => {
 }
 
 .status-delete {
+  color: red;
+}
+
+.status-error {
   color: red;
 }
 
@@ -870,7 +1002,10 @@ onBeforeUnmount(() => {
 
   display: grid;
   grid-template-columns:
-    repeat(3, minmax(0, 1fr));
+    repeat(
+      3,
+      minmax(0, 1fr)
+    );
 
   align-items: start;
 
@@ -1064,9 +1199,6 @@ onBeforeUnmount(() => {
   font-size: 0.7rem;
 }
 
-/*
- * Small × next to each tag.
- */
 .remove-tag-button {
   appearance: none;
 
@@ -1130,7 +1262,8 @@ onBeforeUnmount(() => {
 
   padding-top: 0.65rem;
 
-  border-top: 1px solid #d5d5d5;
+  border-top:
+    1px solid #d5d5d5;
 
   display: flex;
   flex-direction: column;
@@ -1234,7 +1367,10 @@ onBeforeUnmount(() => {
 
   .edits-grid {
     grid-template-columns:
-      repeat(2, minmax(0, 1fr));
+      repeat(
+        2,
+        minmax(0, 1fr)
+      );
   }
 }
 

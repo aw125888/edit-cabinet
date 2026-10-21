@@ -35,19 +35,25 @@ async function submit() {
             password: password.value,
           });
 
-    if ("error" in result) {
-      if (result.error === "UNAUTHORIZED") {
-        message.value = "The username or password is incorrect.";
-      } else if (result.error === "CONFLICT") {
-        message.value = "That username is already taken.";
-      } else {
-        message.value = `Could not ${
-          mode.value === "register" ? "register" : "sign in"
-        }: ${result.error}`;
-      }
+   if ("error" in result) {
+  if (result.error === "UNAUTHORIZED") {
+    message.value =
+      "The username or password is incorrect.";
+  } else if (result.error === "CONFLICT") {
+    message.value =
+      "That username is already taken.";
+  } else if (result.error === "INVALID_REQUEST") {
+    message.value =
+      mode.value === "register"
+        ? "Please check your username and password and try again."
+        : "Please check your information and try again.";
+  } else {
+    message.value =
+      "Something went wrong. Please try again.";
+  }
 
-      return;
-    }
+  return;
+}
 
     const me = await api.auth.me({});
 
@@ -241,6 +247,7 @@ function switchMode() {
 .auth-message {
   margin: 0.5rem 0 0;
   text-align: center;
+  color: red;
 }
 
 .auth-switch {

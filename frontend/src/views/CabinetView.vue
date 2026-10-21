@@ -1,6 +1,12 @@
 <script setup lang="ts">
-import { onMounted, ref } from "vue";
+import {
+  onBeforeUnmount,
+  onMounted,
+  ref,
+} from "vue";
+
 import { api } from "../api";
+import folderImage from "../assets/folders.jpg";
 
 defineEmits<{
   back: [];
@@ -20,100 +26,251 @@ interface CabinetItem {
   };
 }
 
+type MessageType =
+  | "normal"
+  | "success"
+  | "delete"
+  | "error";
+
 const folders = ref<Folder[]>([]);
 const selectedFolder = ref<Folder | null>(null);
 const items = ref<CabinetItem[]>([]);
 
 const message = ref("");
+const messageType =
+  ref<MessageType>("normal");
+const messageVisible = ref(false);
+
 const loading = ref(false);
 
-const editingFolder = ref<string | null>(null);
+const editingFolder =
+  ref<string | null>(null);
 const renameInput = ref("");
 
 const newFolderName = ref("");
 const creatingFolder = ref(false);
 
-async function loadFolders() {
-  loading.value = true;
+let messageTimer:
+  | ReturnType<typeof setTimeout>
+  | undefined;
+
+let fadeTimer:
+  | ReturnType<typeof setTimeout>
+  | undefined;
+
+/* ==============================
+   MESSAGES
+   ============================== */
+
+function clearMessageTimers() {
+  if (messageTimer !== undefined) {
+    clearTimeout(messageTimer);
+    messageTimer = undefined;
+  }
+
+  if (fadeTimer !== undefined) {
+    clearTimeout(fadeTimer);
+    fadeTimer = undefined;
+  }
+}
+
+function clearMessage() {
+  clearMessageTimers();
+
   message.value = "";
+  messageType.value = "normal";
+  messageVisible.value = false;
+}
+
+function showPermanentMessage(
+  text: string,
+  type: "normal" | "error" = "normal",
+) {
+  clearMessageTimers();
+
+  message.value = text;
+  messageType.value = type;
+  messageVisible.value = true;
+}
+
+function showTemporaryMessage(
+  text: string,
+  type: "success" | "delete",
+) {
+  clearMessageTimers();
+
+  message.value = text;
+  messageType.value = type;
+  messageVisible.value = true;
+
+  messageTimer = setTimeout(() => {
+    messageVisible.value = false;
+
+    fadeTimer = setTimeout(() => {
+      message.value = "";
+      messageType.value = "normal";
+      fadeTimer = undefined;
+    }, 800);
+
+    messageTimer = undefined;
+  }, 2500);
+}
+
+function friendlyError(error: string) {
+  switch (error) {
+    case "FORBIDDEN":
+      return "You don't have permission to do that.";
+
+    case "UNAUTHORIZED":
+      return "Please sign in again.";
+
+    case "INVALID_REQUEST":
+      return "That request could not be completed.";
+
+    default:
+      return "Something went wrong. Please try again.";
+  }
+}
+
+/* ==============================
+   FOLDERS
+   ============================== */
+
+async function loadFolders(
+  preserveMessage = false,
+) {
+  loading.value = true;
+
+  if (!preserveMessage) {
+    clearMessage();
+  }
 
   try {
-    const result = await api.slot.folders({});
+    const result =
+      await api.slot.folders({});
 
     if ("error" in result) {
-      message.value = `Could not load folders: ${result.error}`;
+      showPermanentMessage(
+        friendlyError(result.error),
+        "error",
+      );
+
       return;
     }
 
-    folders.value = result.result.folders;
+    folders.value =
+      result.result.folders;
 
-    if (folders.value.length === 0) {
-      message.value = "You don't have any folders yet.";
+    if (
+      folders.value.length === 0 &&
+      !preserveMessage
+    ) {
+      showPermanentMessage(
+        "You don't have any folders yet.",
+      );
     }
   } catch (error) {
     console.error(error);
-    message.value = "Could not connect to the backend.";
+
+    showPermanentMessage(
+      "Could not connect to the backend.",
+      "error",
+    );
   } finally {
     loading.value = false;
   }
 }
 
 async function createFolder() {
-  const name = newFolderName.value.trim();
+  const name =
+    newFolderName.value.trim();
 
   if (!name || creatingFolder.value) {
     return;
   }
 
   creatingFolder.value = true;
-  message.value = "";
+  clearMessage();
 
   try {
-    const result = await api.slot.folder.create({
-      name,
-    });
+    const result =
+      await api.slot.folder.create({
+        name,
+      });
 
     if ("error" in result) {
-      message.value = `Could not create folder: ${result.error}`;
+      if (result.error === "CONFLICT") {
+        showPermanentMessage(
+          "You already have a folder with that name.",
+          "error",
+        );
+      } else {
+        showPermanentMessage(
+          friendlyError(result.error),
+          "error",
+        );
+      }
+
       return;
     }
 
     newFolderName.value = "";
 
-    await loadFolders();
+    await loadFolders(true);
 
-    message.value = "Folder created.";
+    showTemporaryMessage(
+      "Folder created.",
+      "success",
+    );
   } catch (error) {
     console.error(error);
-    message.value = "Could not connect to the backend.";
+
+    showPermanentMessage(
+      "Could not connect to the backend.",
+      "error",
+    );
   } finally {
     creatingFolder.value = false;
   }
 }
 
-async function openFolder(folder: Folder) {
+async function openFolder(
+  folder: Folder,
+) {
   loading.value = true;
-  message.value = "";
+  clearMessage();
 
   try {
-    const result = await api.slot.folder({
-      folder: folder.folder,
-    });
+    const result =
+      await api.slot.folder({
+        folder: folder.folder,
+      });
 
     if ("error" in result) {
-      message.value = `Could not load folder: ${result.error}`;
+      showPermanentMessage(
+        friendlyError(result.error),
+        "error",
+      );
+
       return;
     }
 
     selectedFolder.value = folder;
-    items.value = result.result.items;
+    items.value =
+      result.result.items;
 
     if (items.value.length === 0) {
-      message.value = "This folder is empty.";
+      showPermanentMessage(
+        "This folder is empty.",
+      );
     }
   } catch (error) {
     console.error(error);
-    message.value = "Could not connect to the backend.";
+
+    showPermanentMessage(
+      "Could not connect to the backend.",
+      "error",
+    );
   } finally {
     loading.value = false;
   }
@@ -122,32 +279,57 @@ async function openFolder(folder: Folder) {
 function backToFolders() {
   selectedFolder.value = null;
   items.value = [];
-  message.value = "";
+
+  clearMessage();
 }
 
-async function removePost(post: string) {
+async function removePost(
+  post: string,
+) {
   if (selectedFolder.value === null) {
     return;
   }
 
-  const result = await api.slot.remove({
-    folder: selectedFolder.value.folder,
-    post,
-  });
+  const folder =
+    selectedFolder.value;
+
+  const result =
+    await api.slot.remove({
+      folder: folder.folder,
+      post,
+    });
 
   if ("error" in result) {
-    message.value = `Could not remove edit: ${result.error}`;
+    showPermanentMessage(
+      friendlyError(result.error),
+      "error",
+    );
+
     return;
   }
 
-  await openFolder(selectedFolder.value);
+  await openFolder(folder);
 
-  message.value = "Edit removed.";
+  showTemporaryMessage(
+    "Edit removed.",
+    "delete",
+  );
 }
 
-function startRename(folder: Folder) {
-  editingFolder.value = folder.folder;
-  renameInput.value = folder.name;
+/* ==============================
+   RENAME
+   ============================== */
+
+function startRename(
+  folder: Folder,
+) {
+  editingFolder.value =
+    folder.folder;
+
+  renameInput.value =
+    folder.name;
+
+  clearMessage();
 }
 
 function cancelRename() {
@@ -155,48 +337,84 @@ function cancelRename() {
   renameInput.value = "";
 }
 
-async function renameFolder(folder: Folder) {
-  const name = renameInput.value.trim();
+async function renameFolder(
+  folder: Folder,
+) {
+  const name =
+    renameInput.value.trim();
 
   if (!name) {
     return;
   }
 
-  const result = await api.slot.folder.rename({
-    folder: folder.folder,
-    name,
-  });
+  const result =
+    await api.slot.folder.rename({
+      folder: folder.folder,
+      name,
+    });
 
   if ("error" in result) {
-    message.value = `Could not rename folder: ${result.error}`;
+    if (result.error === "CONFLICT") {
+      showPermanentMessage(
+        "You already have a folder with that name.",
+        "error",
+      );
+    } else {
+      showPermanentMessage(
+        friendlyError(result.error),
+        "error",
+      );
+    }
+
     return;
   }
 
   editingFolder.value = null;
   renameInput.value = "";
 
-  await loadFolders();
+  await loadFolders(true);
 
-  message.value = "Folder renamed.";
+  showTemporaryMessage(
+    "Folder renamed.",
+    "success",
+  );
 }
 
-async function deleteFolder(folder: Folder) {
-  const result = await api.slot.folder.delete({
-    folder: folder.folder,
-  });
+/* ==============================
+   DELETE
+   ============================== */
+
+async function deleteFolder(
+  folder: Folder,
+) {
+  const result =
+    await api.slot.folder.delete({
+      folder: folder.folder,
+    });
 
   if ("error" in result) {
-    message.value = `Could not delete folder: ${result.error}`;
+    showPermanentMessage(
+      friendlyError(result.error),
+      "error",
+    );
+
     return;
   }
 
-  await loadFolders();
+  await loadFolders(true);
 
-  message.value = "Folder deleted.";
+  showTemporaryMessage(
+    "Folder deleted.",
+    "delete",
+  );
 }
 
 onMounted(() => {
   loadFolders();
+});
+
+onBeforeUnmount(() => {
+  clearMessageTimers();
 });
 </script>
 
@@ -221,173 +439,225 @@ onMounted(() => {
       ← Back to folders
     </button>
 
-    <!-- MAIN CABINET VIEW -->
-    <template v-if="selectedFolder === null">
-      <h1 class="page-title">
-        My Cabinet:
-      </h1>
+    <!-- =========================
+         MAIN COLLECTIONS VIEW
+         ========================= -->
+    <template
+      v-if="selectedFolder === null"
+    >
+      <!-- DECORATIVE IMAGE -->
+      <img
+        class="folder-image"
+        :src="folderImage"
+        alt=""
+        aria-hidden="true"
+      />
 
-      <p
-        v-if="loading"
-        class="status-message"
-      >
-        Loading...
-      </p>
+      <div class="collections-content">
+        <h1 class="page-title">
+          My Personal Collections:
+        </h1>
 
-      <p
-        v-if="message"
-        class="status-message"
-      >
-        {{ message }}
-      </p>
-
-      <section class="folder-panel">
-        <!-- CREATE -->
-        <div class="create-folder-section">
-          <p class="section-heading">
-            Create New Folder:
-          </p>
-
-          <div class="create-folder-row">
-            <input
-              v-model="newFolderName"
-              type="text"
-              placeholder="New folder name"
-              @keyup.enter="createFolder"
-            />
-
-            <button
-              class="red-action"
-              type="button"
-              :disabled="
-                creatingFolder ||
-                !newFolderName.trim()
-              "
-              @click="createFolder"
-            >
-              {{
-                creatingFolder
-                  ? "Creating..."
-                  : "Create Folder"
-              }}
-            </button>
-          </div>
-        </div>
-
-        <!-- CURRENT FOLDERS -->
-        <div class="current-folders">
-          <p class="section-heading">
-            Current Folders:
+        <!--
+          Reserved space means reactions can
+          appear/fade without moving the content.
+        -->
+        <div class="status-area">
+          <p
+            v-if="loading"
+            class="status-message"
+          >
+            Loading...
           </p>
 
           <p
-            v-if="
-              folders.length === 0 &&
-              !loading
-            "
-            class="empty-message"
+            v-else-if="message"
+            class="status-message"
+            :class="[
+              `status-${messageType}`,
+              {
+                'status-hidden':
+                  !messageVisible,
+              },
+            ]"
           >
-            No available folders.
+            {{ message }}
           </p>
+        </div>
 
-          <ul
-            v-else
-            class="folder-list"
-          >
-            <li
-              v-for="folder in folders"
-              :key="folder.folder"
-              class="folder-row"
+        <section class="folder-panel">
+          <!-- CURRENT FOLDERS -->
+          <div class="current-folders">
+            <p class="section-heading">
+              Current Folders:
+            </p>
+
+            <p
+              v-if="
+                folders.length === 0 &&
+                !loading
+              "
+              class="empty-message"
             >
-              <template
-                v-if="
-                  editingFolder !==
-                  folder.folder
-                "
+              No available folders.
+            </p>
+
+            <ul
+              v-else
+              class="folder-list"
+            >
+              <li
+                v-for="folder in folders"
+                :key="folder.folder"
+                class="folder-row"
               >
-                <button
-                  class="folder-name"
-                  type="button"
-                  @click="openFolder(folder)"
-                >
-                  {{ folder.name }}
-                </button>
-
-                <div class="folder-actions">
-                  <button
-                    class="blue-action"
-                    type="button"
-                    @click="startRename(folder)"
-                  >
-                    Rename
-                  </button>
-
-                  <button
-                    class="red-action"
-                    type="button"
-                    @click="deleteFolder(folder)"
-                  >
-                    Delete
-                  </button>
-                </div>
-              </template>
-
-              <!-- RENAME -->
-              <template v-else>
-                <input
-                  v-model="renameInput"
-                  class="rename-input"
-                  type="text"
-                  @keyup.enter="
-                    renameFolder(folder)
+                <template
+                  v-if="
+                    editingFolder !==
+                    folder.folder
                   "
-                />
+                >
+                  <span class="folder-name">
+                    {{ folder.name }}
+                  </span>
 
-                <div class="folder-actions">
-                  <button
-                    class="blue-action"
-                    type="button"
-                    @click="
+                  <div class="folder-actions">
+                    <button
+                      class="purple-action"
+                      type="button"
+                      @click="
+                        openFolder(folder)
+                      "
+                    >
+                      Inspect
+                    </button>
+
+                    <button
+                      class="blue-action"
+                      type="button"
+                      @click="
+                        startRename(folder)
+                      "
+                    >
+                      Rename
+                    </button>
+
+                    <button
+                      class="red-action"
+                      type="button"
+                      @click="
+                        deleteFolder(folder)
+                      "
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </template>
+
+                <!-- RENAME -->
+                <template v-else>
+                  <input
+                    v-model="renameInput"
+                    class="rename-input"
+                    type="text"
+                    maxlength="50"
+                    @keyup.enter="
                       renameFolder(folder)
                     "
-                  >
-                    Save
-                  </button>
+                  />
 
-                  <button
-                    class="plain-action"
-                    type="button"
-                    @click="cancelRename"
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </template>
-            </li>
-          </ul>
-        </div>
-      </section>
+                  <div class="folder-actions">
+                    <button
+                      class="blue-action"
+                      type="button"
+                      @click="
+                        renameFolder(folder)
+                      "
+                    >
+                      Save
+                    </button>
+
+                    <button
+                      class="plain-action"
+                      type="button"
+                      @click="cancelRename"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </template>
+              </li>
+            </ul>
+          </div>
+
+          <!-- CREATE BELOW CURRENT FOLDERS -->
+          <div class="create-folder-section">
+            <p class="section-heading">
+              Create New Folder:
+            </p>
+
+            <div class="create-folder-row">
+              <input
+                v-model="newFolderName"
+                type="text"
+                maxlength="50"
+                placeholder="New folder name"
+                @keyup.enter="createFolder"
+              />
+
+              <button
+                class="red-action"
+                type="button"
+                :disabled="
+                  creatingFolder ||
+                  !newFolderName.trim()
+                "
+                @click="createFolder"
+              >
+                {{
+                  creatingFolder
+                    ? "Creating..."
+                    : "Create Folder"
+                }}
+              </button>
+            </div>
+          </div>
+        </section>
+      </div>
     </template>
 
-    <!-- SELECTED FOLDER -->
+    <!-- =========================
+         SELECTED FOLDER
+         ========================= -->
     <template v-else>
-      <h1 class="page-title folder-title">
+      <h1
+        class="page-title folder-title"
+      >
         {{ selectedFolder.name }}:
       </h1>
 
-      <p
-        v-if="loading"
-        class="status-message"
-      >
-        Loading...
-      </p>
+      <div class="status-area">
+        <p
+          v-if="loading"
+          class="status-message"
+        >
+          Loading...
+        </p>
 
-      <p
-        v-if="message"
-        class="status-message"
-      >
-        {{ message }}
-      </p>
+        <p
+          v-else-if="message"
+          class="status-message"
+          :class="[
+            `status-${messageType}`,
+            {
+              'status-hidden':
+                !messageVisible,
+            },
+          ]"
+        >
+          {{ message }}
+        </p>
+      </div>
 
       <section
         v-if="items.length > 0"
@@ -430,7 +700,7 @@ onMounted(() => {
             </p>
 
             <!-- CATALOGER -->
-            <p class="card-line cataloger-line">
+            <p class="card-line">
               <span class="card-label">
                 Cataloged By:
               </span>
@@ -441,11 +711,12 @@ onMounted(() => {
             </p>
           </article>
 
-          <!-- REMOVE OUTSIDE CARD -->
           <button
             class="remove-post"
             type="button"
-            @click="removePost(item.post)"
+            @click="
+              removePost(item.post)
+            "
           >
             Remove from folder
           </button>
@@ -473,6 +744,42 @@ onMounted(() => {
   position: absolute;
   top: 1.5rem;
   left: 1.5rem;
+
+  z-index: 5;
+}
+
+/* ==============================
+   MAIN COLLECTIONS LAYOUT
+   ============================== */
+
+.collections-content {
+  position: relative;
+
+  z-index: 1;
+
+  width: min(90vw, 560px);
+
+  margin: 0 auto;
+}
+
+/*
+ * Decorative folder image on the left,
+ * vertically centered in the viewport.
+ */
+.folder-image {
+  position: fixed;
+
+  top: 50%;
+  left: 5rem;
+
+  width: min(25vw, 330px);
+  max-height: 65vh;
+
+  object-fit: contain;
+
+  transform: translateY(-50%);
+
+  pointer-events: none;
 }
 
 /* ==============================
@@ -480,9 +787,11 @@ onMounted(() => {
    ============================== */
 
 .page-title {
-  margin: 2rem 0 3rem;
+  margin: 2rem 0 1.5rem;
 
   text-align: center;
+
+  color: rgb(239, 14, 160);
 
   font-family: "Montella", serif;
   font-size: 3rem;
@@ -490,12 +799,55 @@ onMounted(() => {
   line-height: 1;
 }
 
+/* ==============================
+   STATUS
+   ============================== */
+
+/*
+ * Permanent reserved space.
+ * Messages can fade without shifting
+ * the folder panel up or down.
+ */
+.status-area {
+  height: 2.5rem;
+
+  margin: 0 0 1rem;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
 .status-message {
-  margin: -1.5rem 0 1.5rem;
+  margin: 0;
 
   text-align: center;
 
   font-size: 0.85rem;
+
+  opacity: 1;
+
+  transition: opacity 0.8s ease;
+}
+
+.status-normal {
+  color: #181818;
+}
+
+.status-success {
+  color: green;
+}
+
+.status-delete {
+  color: red;
+}
+
+.status-error {
+  color: red;
+}
+
+.status-hidden {
+  opacity: 0;
 }
 
 /* ==============================
@@ -508,8 +860,12 @@ onMounted(() => {
   margin: 0 auto;
 }
 
+.current-folders {
+  margin: 0;
+}
+
 .create-folder-section {
-  margin-bottom: 2rem;
+  margin-top: 2rem;
 }
 
 .section-heading {
@@ -533,10 +889,6 @@ onMounted(() => {
 
 .create-folder-row input {
   width: 220px;
-}
-
-.current-folders {
-  margin-top: 1rem;
 }
 
 .empty-message {
@@ -571,27 +923,18 @@ onMounted(() => {
 }
 
 .folder-name {
-  appearance: none;
+  min-width: 0;
 
-  border: 0;
-  padding: 0;
-
-  background: transparent;
-
-  font: inherit;
   font-size: 0.9rem;
 
-  cursor: pointer;
-}
-
-.folder-name:hover,
-.folder-name:focus-visible {
-  color: pink;
+  overflow-wrap: anywhere;
 }
 
 .folder-actions {
   display: flex;
   align-items: center;
+
+  flex-shrink: 0;
 
   gap: 0.8rem;
 }
@@ -606,6 +949,7 @@ onMounted(() => {
 
 .red-action,
 .blue-action,
+.purple-action,
 .plain-action {
   appearance: none;
 
@@ -620,12 +964,16 @@ onMounted(() => {
   cursor: pointer;
 }
 
-.red-action {
-  color: red;
+.purple-action {
+  color: purple;
 }
 
 .blue-action {
   color: blue;
+}
+
+.red-action {
+  color: red;
 }
 
 .plain-action {
@@ -636,6 +984,8 @@ onMounted(() => {
 .red-action:focus-visible,
 .blue-action:hover,
 .blue-action:focus-visible,
+.purple-action:hover,
+.purple-action:focus-visible,
 .plain-action:hover,
 .plain-action:focus-visible {
   text-decoration: underline;
@@ -653,7 +1003,7 @@ onMounted(() => {
    ============================== */
 
 .folder-title {
-  margin-bottom: 3rem;
+  margin-bottom: 1.5rem;
 }
 
 .items-grid {
@@ -724,10 +1074,10 @@ onMounted(() => {
 .cataloger {
   margin-left: 0.2rem;
 
+  color: blue;
+
   font-size: 0.85rem;
   font-style: italic;
-
-  color: blue;
 }
 
 /* ==============================
@@ -760,9 +1110,30 @@ onMounted(() => {
    RESPONSIVE
    ============================== */
 
+@media (max-width: 1100px) {
+  .folder-image {
+    left: 2rem;
+
+    width: min(22vw, 240px);
+  }
+
+  .collections-content {
+    margin-left: auto;
+    margin-right: 5%;
+  }
+}
+
 @media (max-width: 900px) {
   .cabinet-page {
     padding: 2rem;
+  }
+
+  .folder-image {
+    display: none;
+  }
+
+  .collections-content {
+    margin: 0 auto;
   }
 
   .items-grid {
@@ -792,18 +1163,22 @@ onMounted(() => {
     width: 100%;
   }
 
-  .create-folder-row {
-    align-items: flex-start;
-    flex-direction: column;
-
-    gap: 0.5rem;
-  }
-
   .folder-row {
     align-items: flex-start;
     flex-direction: column;
 
     gap: 0.4rem;
+  }
+
+  .folder-actions {
+    flex-wrap: wrap;
+  }
+
+  .create-folder-row {
+    align-items: flex-start;
+    flex-direction: column;
+
+    gap: 0.5rem;
   }
 
   .items-grid {

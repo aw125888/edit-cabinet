@@ -44,26 +44,9 @@ interface Folder {
 }
 
 const folders = ref<Folder[]>([]);
-
-/*
- * Multiple Slot panels can now be open at once.
- */
 const openSlots = ref<Set<string>>(new Set());
-
-/*
- * Each post gets its own new-folder input.
- */
 const newFolderNames = ref<Record<string, string>>({});
-
-/*
- * Each post gets its own Slot status message.
- */
 const slotMessages = ref<Record<string, string>>({});
-
-/*
- * Tracks post/folder combinations that have already
- * successfully been added during this UI session.
- */
 const addedFolders = ref<Set<string>>(new Set());
 
 const selectedTags = ref<SearchTag[]>([]);
@@ -83,45 +66,99 @@ const message = ref("");
 const searching = ref(false);
 const hasSearched = ref(false);
 
-const canSearch = computed(() => selectedTags.value.length >= 1);
+const canSearch = computed(() => {
+  return selectedTags.value.length >= 1;
+});
 
 function categoryLabel(category: Category) {
   switch (category) {
     case "Aesthetic/Concept":
       return "Aesthetic";
+
     case "Characters":
       return "Character";
+
     case "Things":
       return "Thing";
+
     default:
       return category;
   }
 }
 
-function slotKey(post: string, folder: string) {
+function resultCategoryLabel(category: string) {
+  switch (category) {
+    case "Aesthetic/Concept":
+      return "Aesthetic";
+
+    case "Characters":
+      return "Character";
+
+    case "Things":
+      return "Thing";
+
+    default:
+      return category;
+  }
+}
+
+/*
+ * Generic errors used when the operation itself
+ * does not give us a more specific CONFLICT meaning.
+ */
+function friendlyError(error: string) {
+  switch (error) {
+    case "FORBIDDEN":
+      return "You don't have permission to do that.";
+
+    case "UNAUTHORIZED":
+      return "Please sign in again.";
+
+    case "INVALID_REQUEST":
+      return "That request could not be completed.";
+
+    default:
+      return "Something went wrong. Please try again.";
+  }
+}
+
+function slotKey(
+  post: string,
+  folder: string,
+) {
   return `${post}:${folder}`;
 }
 
-function isAdded(post: string, folder: string) {
-  return addedFolders.value.has(slotKey(post, folder));
+function isAdded(
+  post: string,
+  folder: string,
+) {
+  return addedFolders.value.has(
+    slotKey(post, folder),
+  );
 }
 
 async function loadFolders() {
   const result = await api.slot.folders({});
 
   if ("error" in result) {
-    throw new Error(`Could not load folders: ${result.error}`);
+    throw new Error(
+      friendlyError(result.error),
+    );
   }
 
   folders.value = result.result.folders;
 }
 
 /*
- * Clicking Slot toggles only THAT post.
- * Other open Slot panels remain open.
+ * Each result's Slot panel can open and close
+ * independently.
  */
-async function toggleSlot(post: string) {
-  const next = new Set(openSlots.value);
+async function toggleSlot(
+  post: string,
+) {
+  const next =
+    new Set(openSlots.value);
 
   if (next.has(post)) {
     next.delete(post);
@@ -138,33 +175,77 @@ async function toggleSlot(post: string) {
     await loadFolders();
   } catch (error) {
     console.error(error);
-    slotMessages.value[post] = "Could not load folders.";
+
+    if (error instanceof Error) {
+      slotMessages.value[post] =
+        error.message;
+    } else {
+      slotMessages.value[post] =
+        "Something went wrong. Please try again.";
+    }
   }
 }
 
-async function createFolder(post: string) {
-  const name = (newFolderNames.value[post] ?? "").trim();
+/*
+ * For this endpoint, CONFLICT specifically means
+ * that this user already has a folder with the
+ * requested name.
+ */
+async function createFolder(
+  post: string,
+) {
+  const name = (
+    newFolderNames.value[post] ?? ""
+  ).trim();
 
   if (!name) {
     return;
   }
 
-  const result = await api.slot.folder.create({
-    name,
-  });
+  const result =
+    await api.slot.folder.create({
+      name,
+    });
 
   if ("error" in result) {
-    slotMessages.value[post] =
-      `Could not create folder: ${result.error}`;
+    if (result.error === "CONFLICT") {
+      slotMessages.value[post] =
+        "You already have a folder with that name.";
+    } else if (
+      result.error === "UNAUTHORIZED"
+    ) {
+      slotMessages.value[post] =
+        "Please sign in again.";
+    } else if (
+      result.error === "INVALID_REQUEST"
+    ) {
+      slotMessages.value[post] =
+        "That folder could not be created.";
+    } else {
+      slotMessages.value[post] =
+        "Something went wrong. Please try again.";
+    }
+
     return;
   }
 
   newFolderNames.value[post] = "";
-  slotMessages.value[post] = "Folder created.";
+  slotMessages.value[post] = "";
 
-  await loadFolders();
+  try {
+    await loadFolders();
+  } catch (error) {
+    console.error(error);
+
+    slotMessages.value[post] =
+      "Folder was created, but the folder list could not be refreshed.";
+  }
 }
 
+/*
+ * For this endpoint, CONFLICT specifically means
+ * that this Post is already in this folder.
+ */
 async function addPostToFolder(
   post: string,
   folder: string,
@@ -173,45 +254,83 @@ async function addPostToFolder(
     return;
   }
 
-  const result = await api.slot.add({
-    folder,
-    post,
-  });
+  const result =
+    await api.slot.add({
+      folder,
+      post,
+    });
 
   if ("error" in result) {
-    slotMessages.value[post] =
-      `Could not slot edit: ${result.error}`;
+    if (result.error === "CONFLICT") {
+      slotMessages.value[post] =
+        "This edit is already in that folder.";
+    } else if (
+      result.error === "FORBIDDEN"
+    ) {
+      slotMessages.value[post] =
+        "You don't have permission to add to that folder.";
+    } else if (
+      result.error === "UNAUTHORIZED"
+    ) {
+      slotMessages.value[post] =
+        "Please sign in again.";
+    } else if (
+      result.error === "INVALID_REQUEST"
+    ) {
+      slotMessages.value[post] =
+        "This edit could not be added to that folder.";
+    } else {
+      slotMessages.value[post] =
+        "Something went wrong. Please try again.";
+    }
+
     return;
   }
 
-  const next = new Set(addedFolders.value);
-  next.add(slotKey(post, folder));
-  addedFolders.value = next;
+  const next =
+    new Set(addedFolders.value);
 
+  next.add(
+    slotKey(post, folder),
+  );
+
+  addedFolders.value = next;
   slotMessages.value[post] = "";
 }
 
-function tagsFor(category: Category) {
+function tagsFor(
+  category: Category,
+) {
   return selectedTags.value.filter(
-    (tag) => tag.category === category,
+    (tag) =>
+      tag.category === category,
   );
 }
 
-function addTag(category: Category) {
-  const name = tagInputs.value[category].trim();
+function addTag(
+  category: Category,
+) {
+  const name =
+    tagInputs.value[
+      category
+    ].trim();
 
   if (!name) {
     return;
   }
 
-  const duplicate = selectedTags.value.some(
-    (tag) =>
-      tag.category === category &&
-      tag.name.toLowerCase() === name.toLowerCase(),
-  );
+  const duplicate =
+    selectedTags.value.some(
+      (tag) =>
+        tag.category === category &&
+        tag.name.toLowerCase() ===
+          name.toLowerCase(),
+    );
 
   if (duplicate) {
-    message.value = `"${name}" is already selected.`;
+    message.value =
+      `"${name}" is already selected.`;
+
     return;
   }
 
@@ -224,10 +343,14 @@ function addTag(category: Category) {
   message.value = "";
 }
 
-function removeTag(tagToRemove: SearchTag) {
-  selectedTags.value = selectedTags.value.filter(
-    (tag) => tag !== tagToRemove,
-  );
+function removeTag(
+  tagToRemove: SearchTag,
+) {
+  selectedTags.value =
+    selectedTags.value.filter(
+      (tag) =>
+        tag !== tagToRemove,
+    );
 }
 
 async function search() {
@@ -237,49 +360,77 @@ async function search() {
 
   searching.value = true;
   hasSearched.value = false;
+
   results.value = [];
   message.value = "";
 
-  /*
-   * Reset open result controls when performing
-   * a completely new search.
-   */
   openSlots.value = new Set();
   addedFolders.value = new Set();
+
   slotMessages.value = {};
   newFolderNames.value = {};
 
   try {
-    const matchCounts = new Map<string, number>();
+    const matchCounts =
+      new Map<string, number>();
 
-    for (const tag of selectedTags.value) {
-      const tagResult = await api.search.tag({
-        name: tag.name,
-        category: tag.category,
-      });
+    for (
+      const tag
+      of selectedTags.value
+    ) {
+      const tagResult =
+        await api.search.tag({
+          name: tag.name,
+          category: tag.category,
+        });
 
       if ("error" in tagResult) {
+        console.error(
+          "Search tag error:",
+          tagResult.error,
+        );
+
         throw new Error(
-          `Search failed for tag "${tag.name}": ${tagResult.error}`,
+          "Something went wrong while searching. Please try again.",
         );
       }
 
-      for (const item of tagResult.results.items) {
-        const oldCount = matchCounts.get(item.item) ?? 0;
-        matchCounts.set(item.item, oldCount + 1);
+      for (
+        const item
+        of tagResult.results.items
+      ) {
+        const oldCount =
+          matchCounts.get(
+            item.item,
+          ) ?? 0;
+
+        matchCounts.set(
+          item.item,
+          oldCount + 1,
+        );
       }
     }
 
-    const foundResults: SearchResult[] = [];
+    const foundResults:
+      SearchResult[] = [];
 
-    for (const [post, matches] of matchCounts) {
-      const postResult = await api.search.post({
-        post,
-      });
+    for (
+      const [post, matches]
+      of matchCounts
+    ) {
+      const postResult =
+        await api.search.post({
+          post,
+        });
 
       if ("error" in postResult) {
+        console.error(
+          "Search post error:",
+          postResult.error,
+        );
+
         throw new Error(
-          `Could not retrieve post "${post}": ${postResult.error}`,
+          "A matching edit could not be loaded. Please try again.",
         );
       }
 
@@ -289,17 +440,25 @@ async function search() {
       });
     }
 
-    foundResults.sort((a, b) => b.matches - a.matches);
+    foundResults.sort(
+      (a, b) =>
+        b.matches -
+        a.matches,
+    );
 
-    results.value = foundResults;
+    results.value =
+      foundResults;
+
     hasSearched.value = true;
   } catch (error) {
     console.error(error);
 
     if (error instanceof Error) {
-      message.value = error.message;
+      message.value =
+        error.message;
     } else {
-      message.value = "Search failed.";
+      message.value =
+        "Something went wrong while searching. Please try again.";
     }
   } finally {
     searching.value = false;
@@ -318,7 +477,7 @@ async function search() {
     </button>
 
     <div class="search-layout">
-      <!-- LEFT SIDE: SEARCH -->
+      <!-- SEARCH -->
       <section class="search-panel">
         <h1 class="search-title">
           Search:
@@ -343,6 +502,7 @@ async function search() {
                 <input
                   v-model="tagInputs[category]"
                   type="text"
+                  maxlength="50"
                   :placeholder="`Search ${categoryLabel(category)} tag`"
                   @keyup.enter="addTag(category)"
                 />
@@ -381,19 +541,26 @@ async function search() {
         </div>
 
         <p class="search-count">
-          Search tags: {{ selectedTags.length }}
+          Search tags:
+          {{ selectedTags.length }}
         </p>
 
         <button
           class="search-submit"
           type="button"
-          :disabled="!canSearch || searching"
+          :disabled="
+            !canSearch ||
+            searching
+          "
           @click="search"
         >
-          {{ searching ? "Searching..." : "Search" }}
+          {{
+            searching
+              ? "Searching..."
+              : "Search"
+          }}
         </button>
 
-        <!-- Errors remain on Search side -->
         <p
           v-if="message"
           class="search-message"
@@ -402,7 +569,7 @@ async function search() {
         </p>
       </section>
 
-      <!-- RIGHT SIDE: RESULTS -->
+      <!-- RESULTS -->
       <section
         v-if="hasSearched"
         class="results-panel"
@@ -411,7 +578,6 @@ async function search() {
           Results:
         </h2>
 
-        <!-- Zero-result state -->
         <p
           v-if="results.length === 0"
           class="no-results"
@@ -419,7 +585,6 @@ async function search() {
           No matching edits found.
         </p>
 
-        <!-- Result cards -->
         <div
           v-else
           class="results-grid"
@@ -432,11 +597,15 @@ async function search() {
             <p class="matching-tags">
               {{ result.matches }}
               matching
-              {{ result.matches === 1 ? "tag" : "tags" }}
+              {{
+                result.matches === 1
+                  ? "tag"
+                  : "tags"
+              }}
             </p>
 
             <article class="result-card">
-              <!-- Video -->
+              <!-- VIDEO -->
               <p class="result-line">
                 <span class="result-label">
                   Video:
@@ -452,12 +621,15 @@ async function search() {
                 </a>
               </p>
 
-              <!-- Caption -->
+              <!-- CAPTION -->
               <p class="result-caption">
-                {{ result.caption || "Untitled edit" }}
+                {{
+                  result.caption ||
+                  "Untitled edit"
+                }}
               </p>
 
-              <!-- Cataloger -->
+              <!-- CATALOGER -->
               <p class="result-line">
                 <span class="result-label">
                   Cataloged By:
@@ -468,7 +640,7 @@ async function search() {
                 </span>
               </p>
 
-              <!-- Tags -->
+              <!-- TAGS -->
               <div class="result-tag-section">
                 <p class="result-label">
                   Tags:
@@ -484,24 +656,42 @@ async function search() {
                     </span>
 
                     <span class="tag-category-label">
-                      [{{ categoryLabel(tag.category as Category) }}]
+                      [{{ resultCategoryLabel(tag.category) }}]
                     </span>
                   </li>
                 </ul>
               </div>
 
-              <!-- Slot toggles open/closed -->
+              <!-- SLOT -->
               <button
                 class="slot-button"
                 type="button"
-                :aria-expanded="openSlots.has(result.post)"
-                @click="toggleSlot(result.post)"
+                :aria-expanded="
+                  openSlots.has(
+                    result.post
+                  )
+                "
+                @click="
+                  toggleSlot(
+                    result.post
+                  )
+                "
               >
-                Slot
+                {{
+                  openSlots.has(
+                    result.post
+                  )
+                    ? "Hide Slot Options"
+                    : "Slot"
+                }}
               </button>
 
               <div
-                v-if="openSlots.has(result.post)"
+                v-if="
+                  openSlots.has(
+                    result.post
+                  )
+                "
                 class="slot-panel"
               >
                 <p class="slot-heading">
@@ -509,7 +699,9 @@ async function search() {
                 </p>
 
                 <p
-                  v-if="folders.length === 0"
+                  v-if="
+                    folders.length === 0
+                  "
                   class="no-folders"
                 >
                   No available folders.
@@ -528,16 +720,26 @@ async function search() {
                     </span>
 
                     <button
-                      class="text-action add-here"
+                      class="text-action"
                       type="button"
-                      :disabled="isAdded(result.post, folder.folder)"
-                      @click="addPostToFolder(
-                        result.post,
-                        folder.folder
-                      )"
+                      :disabled="
+                        isAdded(
+                          result.post,
+                          folder.folder
+                        )
+                      "
+                      @click="
+                        addPostToFolder(
+                          result.post,
+                          folder.folder
+                        )
+                      "
                     >
                       {{
-                        isAdded(result.post, folder.folder)
+                        isAdded(
+                          result.post,
+                          folder.folder
+                        )
                           ? "Added"
                           : "Add here"
                       }}
@@ -551,26 +753,47 @@ async function search() {
 
                 <div class="new-folder">
                   <input
-                    v-model="newFolderNames[result.post]"
+                    v-model="
+                      newFolderNames[
+                        result.post
+                      ]
+                    "
                     type="text"
+                    maxlength="50"
                     placeholder="New folder name"
-                    @keyup.enter="createFolder(result.post)"
+                    @keyup.enter="
+                      createFolder(
+                        result.post
+                      )
+                    "
                   />
 
                   <button
                     class="text-action"
                     type="button"
-                    @click="createFolder(result.post)"
+                    @click="
+                      createFolder(
+                        result.post
+                      )
+                    "
                   >
                     Create Folder
                   </button>
                 </div>
 
                 <p
-                  v-if="slotMessages[result.post]"
+                  v-if="
+                    slotMessages[
+                      result.post
+                    ]
+                  "
                   class="slot-message"
                 >
-                  {{ slotMessages[result.post] }}
+                  {{
+                    slotMessages[
+                      result.post
+                    ]
+                  }}
                 </p>
               </div>
             </article>
@@ -584,8 +807,10 @@ async function search() {
 <style scoped>
 .search-page {
   position: relative;
+
   width: 100%;
   min-height: 100vh;
+
   padding: 2rem;
 }
 
@@ -600,20 +825,25 @@ async function search() {
    ============================== */
 
 .search-layout {
-  width: 100%;
+  width: min(
+    1180px,
+    calc(100% - 4rem)
+  );
+
+  margin: 0 auto;
 
   display: grid;
   grid-template-columns:
-    minmax(420px, 520px)
-    minmax(0, 1fr);
+    minmax(400px, 470px)
+    minmax(500px, 1fr);
 
-  gap: 4rem;
+  gap: 4.5rem;
 
-  padding: 4.5rem 3rem 3rem;
+  padding: 4.5rem 0 3rem;
 }
 
 /* ==============================
-   SEARCH SIDE
+   SEARCH
    ============================== */
 
 .search-panel {
@@ -645,6 +875,7 @@ async function search() {
 .tag-categories {
   display: flex;
   flex-direction: column;
+
   gap: 0.8rem;
 }
 
@@ -655,6 +886,7 @@ async function search() {
 .tag-row {
   display: flex;
   align-items: center;
+
   gap: 0.75rem;
 }
 
@@ -664,24 +896,31 @@ async function search() {
 
   margin: 0;
 
-  font-family: "Times New Roman", Times, serif;
+  font-family:
+    "Times New Roman",
+    Times,
+    serif;
+
   font-size: 1rem;
   font-weight: 400;
+
   text-align: right;
 }
 
 .tag-entry {
   display: flex;
   align-items: center;
+
   gap: 1.5rem;
 }
 
 .tag-entry input {
-  width: 240px;
+  width: 220px;
 }
 
 .add-tag {
   appearance: none;
+
   border: 0;
   padding: 0;
 
@@ -689,6 +928,7 @@ async function search() {
   color: red;
 
   font: inherit;
+
   cursor: pointer;
 }
 
@@ -704,6 +944,7 @@ async function search() {
 
 .remove-tag {
   appearance: none;
+
   border: 0;
   padding: 0 0.2rem;
 
@@ -725,12 +966,15 @@ async function search() {
   margin-top: 0.5rem;
 }
 
+/* Errors are red. */
 .search-message {
   margin: 0.5rem 0;
+
+  color: red;
 }
 
 /* ==============================
-   RESULTS SIDE
+   RESULTS
    ============================== */
 
 .results-panel {
@@ -756,9 +1000,15 @@ async function search() {
 
 .results-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns:
+    repeat(
+      2,
+      minmax(0, 1fr)
+    );
 
-  gap: 1.5rem;
+  align-items: start;
+
+  gap: 1.75rem;
 }
 
 .result-wrapper {
@@ -766,17 +1016,17 @@ async function search() {
 }
 
 .matching-tags {
-  margin: 0 0 0.35rem;
+  margin: 0 0 0.3rem;
 
   color: orange;
 
-  font-size: 0.9rem;
+  font-size: 0.85rem;
 }
 
 .result-card {
   min-width: 0;
 
-  padding: 0.75rem;
+  padding: 0.65rem 0.75rem;
 
   border: 1px solid #181818;
 
@@ -787,57 +1037,65 @@ async function search() {
     "Segoe UI",
     sans-serif;
 
-  font-size: 0.85rem;
+  font-size: 0.82rem;
 }
 
 .result-label {
-  font-family: "Times New Roman", Times, serif;
-  font-size: 1rem;
+  font-family:
+    "Times New Roman",
+    Times,
+    serif;
+
+  font-size: 0.95rem;
   font-weight: 400;
 }
 
 .result-line {
-  margin: 0 0 0.55rem;
+  margin: 0 0 0.35rem;
 
-  font-size: 0.85rem;
+  font-size: 0.82rem;
   font-weight: 400;
 }
 
 .result-content {
-  font-size: 0.85rem;
+  font-size: 0.82rem;
 }
 
 .video-link {
   margin-left: 0.2rem;
-  font-size: 0.85rem;
+
+  font-size: 0.82rem;
 }
 
 .result-caption {
-  margin: 0 0 0.55rem;
+  margin: 0 0 0.35rem;
 
-  font-size: 0.85rem;
+  font-size: 0.82rem;
   font-weight: 400;
+
+  overflow-wrap: anywhere;
 }
 
 .result-tag-section {
-  margin-top: 0.5rem;
+  margin-top: 0.35rem;
 }
 
-.result-tag-section > .result-label {
-  margin: 0 0 0.2rem;
+.result-tag-section
+  > .result-label {
+  margin: 0 0 0.1rem;
 }
 
 .result-tags {
-  margin: 0.2rem 0 0;
-  padding-left: 1.25rem;
+  margin: 0.1rem 0 0;
+  padding-left: 1.1rem;
 
   list-style: disc;
 }
 
 .result-tags li {
-  margin: 0.15rem 0;
+  margin: 0.08rem 0;
 
-  font-size: 0.85rem;
+  font-size: 0.8rem;
   font-weight: 400;
 }
 
@@ -846,11 +1104,11 @@ async function search() {
 }
 
 .tag-category-label {
-  margin-left: 0.2rem;
+  margin-left: 0.15rem;
 
   color: #181818;
 
-  font-size: 0.72rem;
+  font-size: 0.68rem;
   font-weight: 400;
 }
 
@@ -859,28 +1117,55 @@ async function search() {
    ============================== */
 
 .slot-button {
-  margin-top: 0.75rem;
+  appearance: none;
+
+  margin-top: 0.55rem;
+
+  border: 0;
+  padding: 0;
+
+  background: transparent;
+  color: blue;
+
+  font: inherit;
+  font-size: 0.8rem;
+
+  cursor: pointer;
+}
+
+.slot-button:hover,
+.slot-button:focus-visible {
+  text-decoration: underline;
 }
 
 .slot-panel {
-  margin-top: 1rem;
+  margin-top: 0.75rem;
+
+  padding-top: 0.6rem;
+
+  border-top: 1px solid #d5d5d5;
 }
 
 .slot-heading {
-  margin: 0 0 0.4rem;
+  margin: 0 0 0.3rem;
 
-  font-family: "Times New Roman", Times, serif;
-  font-size: 0.95rem;
+  font-family:
+    "Times New Roman",
+    Times,
+    serif;
+
+  font-size: 0.9rem;
   font-weight: 400;
 }
 
 .no-folders {
-  margin: 0.25rem 0 0.75rem;
-  font-size: 0.8rem;
+  margin: 0.2rem 0 0.6rem;
+
+  font-size: 0.78rem;
 }
 
 .folder-list {
-  margin: 0.25rem 0 0.75rem;
+  margin: 0.2rem 0 0.6rem;
   padding: 0;
 
   list-style: none;
@@ -893,7 +1178,9 @@ async function search() {
 
   gap: 0.5rem;
 
-  margin: 0.3rem 0;
+  margin: 0.2rem 0;
+
+  font-size: 0.8rem;
 }
 
 .text-action {
@@ -906,6 +1193,7 @@ async function search() {
   color: red;
 
   font: inherit;
+  font-size: 0.78rem;
 
   cursor: pointer;
 }
@@ -915,11 +1203,6 @@ async function search() {
   text-decoration: underline;
 }
 
-/*
- * After successful slotting:
- * Add here → Added
- * fades visually and cannot be pressed.
- */
 .text-action:disabled {
   color: #777;
   opacity: 0.45;
@@ -933,57 +1216,74 @@ async function search() {
 }
 
 .create-heading {
-  margin-top: 0.8rem;
+  margin-top: 0.65rem;
 }
 
 .new-folder {
   display: flex;
   align-items: center;
 
-  gap: 0.75rem;
+  gap: 0.65rem;
 }
 
 .new-folder input {
   min-width: 0;
-  width: 140px;
+  width: 135px;
+
+  font-size: 0.78rem;
 }
 
+/* Slot errors are red. */
 .slot-message {
-  margin: 0.5rem 0 0;
+  margin: 0.4rem 0 0;
 
   color: red;
-  font-size: 0.8rem;
+
+  font-size: 0.78rem;
 }
 
 /* ==============================
    RESPONSIVE
    ============================== */
 
-@media (max-width: 1200px) {
+@media (max-width: 1100px) {
   .search-layout {
-    gap: 2rem;
+    width: min(
+      900px,
+      calc(100% - 2rem)
+    );
 
-    padding-left: 1rem;
-    padding-right: 1rem;
+    grid-template-columns:
+      minmax(360px, 430px)
+      minmax(0, 1fr);
+
+    gap: 2.5rem;
   }
 
   .results-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: 1fr;
   }
 }
 
-@media (max-width: 900px) {
+@media (max-width: 800px) {
   .search-page {
     padding: 1rem;
   }
 
   .back-button {
     position: static;
+
     margin-bottom: 2rem;
   }
 
   .search-layout {
     display: block;
+
+    width: min(
+      520px,
+      100%
+    );
+
     padding: 0;
   }
 
@@ -992,7 +1292,7 @@ async function search() {
   }
 
   .results-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: 1fr;
   }
 }
 
@@ -1005,11 +1305,13 @@ async function search() {
   .tag-row {
     align-items: flex-start;
     flex-direction: column;
+
     gap: 0.25rem;
   }
 
   .category-title {
     width: auto;
+
     text-align: left;
   }
 
@@ -1018,16 +1320,15 @@ async function search() {
   }
 
   .tag-entry input {
-    width: min(100%, 280px);
+    width: min(
+      100%,
+      280px
+    );
   }
 
   .selected-tags {
     margin-left: 0;
     padding-left: 0;
-  }
-
-  .results-grid {
-    grid-template-columns: 1fr;
   }
 }
 </style>
