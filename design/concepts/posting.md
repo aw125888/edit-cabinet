@@ -51,4 +51,7 @@ editCaption(post: Post, caption: String): returns ()
 _get(post: Post) : optional (user: User, media: Item, caption: String)
   answers the user, media, and caption of the given post if it exists
   answers no row if the post does not exist
+
+_postsBy(user: User) : many (post: Post, media: Item, caption: String)
+  Returns all Posts cataloged by the user.
 ```

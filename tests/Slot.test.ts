@@ -273,7 +273,7 @@ test("slot returns the post details inside a folder", async () => {
     items: {
       post: string;
       details: {
-        user: string;
+        username: string;
         media: string;
         caption: string;
       };
@@ -285,13 +285,12 @@ test("slot returns the post details inside a folder", async () => {
   expect(folderContents.items[0]).toEqual({
     post,
     details: {
-      user: amberUser,
+      username: "amber",
       media: "https://example.com/spooky-edit",
       caption: "Spooky edit",
     },
   });
 });
-
 test("slot renames a folder", async () => {
   const folderResult = await app.invoker.invoke(
     "/slot/folder/create",
@@ -661,4 +660,362 @@ test("a user cannot delete another user's folder", async () => {
 
   expect(storedFolder).not.toBeNull();
   expect(storedFolder?.owner).toBe(amberUser);
+});
+
+test("deleting one folder preserves the user's other folders", async () => {
+  const firstResult = await app.invoker.invoke(
+    "/slot/folder/create",
+    {
+      session: amberSession,
+      name: "Folder A",
+    },
+  );
+
+  const secondResult = await app.invoker.invoke(
+    "/slot/folder/create",
+    {
+      session: amberSession,
+      name: "Folder B",
+    },
+  );
+
+  const thirdResult = await app.invoker.invoke(
+    "/slot/folder/create",
+    {
+      session: amberSession,
+      name: "Folder C",
+    },
+  );
+
+  expect(firstResult.ok).toBe(true);
+  expect(secondResult.ok).toBe(true);
+  expect(thirdResult.ok).toBe(true);
+
+  if (
+    !secondResult.ok ||
+    typeof secondResult.value !== "object" ||
+    secondResult.value === null ||
+    !("folder" in secondResult.value) ||
+    typeof secondResult.value.folder !== "string"
+  ) {
+    throw new Error("Expected Folder B to be created");
+  }
+
+  const folderB = secondResult.value.folder;
+
+  const deleteResult = await app.invoker.invoke(
+    "/slot/folder/delete",
+    {
+      session: amberSession,
+      folder: folderB,
+    },
+  );
+
+  expect(deleteResult.ok).toBe(true);
+
+  const foldersResult = await app.invoker.invoke(
+    "/slot/folders",
+    {
+      session: amberSession,
+    },
+  );
+
+  expect(foldersResult.ok).toBe(true);
+
+  if (
+    !foldersResult.ok ||
+    typeof foldersResult.value !== "object" ||
+    foldersResult.value === null ||
+    !("result" in foldersResult.value)
+  ) {
+    throw new Error("Expected folders result");
+  }
+
+  const result = foldersResult.value.result as {
+    folders: {
+      folder: string;
+      name: string;
+    }[];
+  };
+
+expect(result.folders).toHaveLength(2);
+
+expect(
+  result.folders.map((folder) => folder.name),
+).toEqual(
+  expect.arrayContaining([
+    "Folder A",
+    "Folder C",
+  ]),
+);
+});
+
+test("creating a duplicate folder returns FOLDER_NAME_TAKEN", async () => {
+  const first = await app.invoker.invoke(
+    "/slot/folder/create",
+    {
+      session: amberSession,
+      name: "Duplicate Test Folder",
+    },
+  );
+
+  expect(first.ok).toBe(true);
+
+  const duplicate = await app.invoker.invoke(
+    "/slot/folder/create",
+    {
+      session: amberSession,
+      name: "Duplicate Test Folder",
+    },
+  );
+
+  expect(duplicate.ok).toBe(false);
+
+  if (duplicate.ok) {
+    throw new Error(
+      "Expected duplicate folder creation to fail",
+    );
+  }
+
+  expect(duplicate.error.kind).toBe("domain");
+
+  if (duplicate.error.kind !== "domain") {
+    throw new Error(
+      "Expected a domain error",
+    );
+  }
+
+ expect(duplicate.error.value).toBe(
+  "FOLDER_NAME_TAKEN",
+);
+});
+
+test("adding the same post to a folder twice returns ALREADY_IN_FOLDER", async () => {
+  const folderResult = await app.invoker.invoke(
+    "/slot/folder/create",
+    {
+      session: amberSession,
+      name: "Duplicate Slot Test",
+    },
+  );
+
+  expect(folderResult.ok).toBe(true);
+
+  if (
+    !folderResult.ok ||
+    typeof folderResult.value !== "object" ||
+    folderResult.value === null ||
+    !("folder" in folderResult.value) ||
+    typeof folderResult.value.folder !== "string"
+  ) {
+    throw new Error(
+      "Expected folder creation to return a folder",
+    );
+  }
+
+  const folder = folderResult.value.folder;
+
+  const postResult = await app.invoker.invoke(
+    "/catalog/post",
+    {
+      session: amberSession,
+      media: "https://example.com/duplicate-slot.mp4",
+      caption: "Duplicate slot test",
+    },
+  );
+
+  expect(postResult.ok).toBe(true);
+
+  if (
+    !postResult.ok ||
+    typeof postResult.value !== "object" ||
+    postResult.value === null ||
+    !("post" in postResult.value) ||
+    typeof postResult.value.post !== "string"
+  ) {
+    throw new Error(
+      "Expected catalog to return a post",
+    );
+  }
+
+  const post = postResult.value.post;
+
+  // First add should succeed.
+  const firstAdd = await app.invoker.invoke(
+    "/slot/add",
+    {
+      session: amberSession,
+      folder,
+      post,
+    },
+  );
+
+  expect(firstAdd.ok).toBe(true);
+
+  // Same Post + same folder should now give
+  // our friendly domain error.
+  const duplicateAdd = await app.invoker.invoke(
+    "/slot/add",
+    {
+      session: amberSession,
+      folder,
+      post,
+    },
+  );
+
+  expect(duplicateAdd.ok).toBe(false);
+
+  if (duplicateAdd.ok) {
+    throw new Error(
+      "Expected duplicate slot to fail",
+    );
+  }
+
+  expect(duplicateAdd.error.kind).toBe("domain");
+
+  if (duplicateAdd.error.kind !== "domain") {
+    throw new Error(
+      "Expected a domain error",
+    );
+  }
+
+  expect(duplicateAdd.error.value).toBe(
+    "ALREADY_IN_FOLDER",
+  );
+
+  // Make sure the failed second request did not
+  // change the folder's contents.
+  const folderContents = await app.invoker.invoke(
+    "/slot/folder",
+    {
+      session: amberSession,
+      folder,
+    },
+  );
+
+  expect(folderContents.ok).toBe(true);
+
+  if (
+    !folderContents.ok ||
+    typeof folderContents.value !== "object" ||
+    folderContents.value === null ||
+    !("result" in folderContents.value)
+  ) {
+    throw new Error(
+      "Expected folder contents",
+    );
+  }
+
+  const result = folderContents.value.result as {
+    items: {
+      post: string;
+    }[];
+  };
+
+  expect(result.items).toHaveLength(1);
+  expect(result.items[0]?.post).toBe(post);
+});
+
+test("renaming a folder to an existing folder name returns FOLDER_NAME_TAKEN", async () => {
+  const firstResult = await app.invoker.invoke(
+    "/slot/folder/create",
+    {
+      session: amberSession,
+      name: "Rename Source",
+    },
+  );
+
+  const secondResult = await app.invoker.invoke(
+    "/slot/folder/create",
+    {
+      session: amberSession,
+      name: "Rename Target",
+    },
+  );
+
+  expect(firstResult.ok).toBe(true);
+  expect(secondResult.ok).toBe(true);
+
+  if (
+    !firstResult.ok ||
+    typeof firstResult.value !== "object" ||
+    firstResult.value === null ||
+    !("folder" in firstResult.value) ||
+    typeof firstResult.value.folder !== "string"
+  ) {
+    throw new Error(
+      "Expected first folder creation to succeed",
+    );
+  }
+
+  const firstFolder = firstResult.value.folder;
+
+  const renameResult = await app.invoker.invoke(
+    "/slot/folder/rename",
+    {
+      session: amberSession,
+      folder: firstFolder,
+      name: "Rename Target",
+    },
+  );
+
+  expect(renameResult.ok).toBe(false);
+
+  if (renameResult.ok) {
+    throw new Error(
+      "Expected duplicate folder rename to fail",
+    );
+  }
+
+  expect(renameResult.error.kind).toBe("domain");
+
+  if (renameResult.error.kind !== "domain") {
+    throw new Error(
+      "Expected a domain error",
+    );
+  }
+
+  expect(renameResult.error.value).toBe(
+    "FOLDER_NAME_TAKEN",
+  );
+
+  /*
+   * Verify the failed rename did not change
+   * either folder.
+   */
+  const foldersResult = await app.invoker.invoke(
+    "/slot/folders",
+    {
+      session: amberSession,
+    },
+  );
+
+  expect(foldersResult.ok).toBe(true);
+
+  if (
+    !foldersResult.ok ||
+    typeof foldersResult.value !== "object" ||
+    foldersResult.value === null ||
+    !("result" in foldersResult.value)
+  ) {
+    throw new Error(
+      "Expected folder list",
+    );
+  }
+
+  const result = foldersResult.value.result as {
+    folders: {
+      folder: string;
+      name: string;
+    }[];
+  };
+
+  expect(
+    result.folders.map((folder) => folder.name),
+  ).toEqual(
+    expect.arrayContaining([
+      "Rename Source",
+      "Rename Target",
+    ]),
+  );
 });

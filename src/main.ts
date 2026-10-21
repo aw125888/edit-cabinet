@@ -16,10 +16,43 @@ const handler = createHttpHandler({
   policy: editCabinetApiPolicy(),
 });
 
+const dist =
+  `${import.meta.dir}/../frontend/dist`;
+
 const server = Bun.serve({
-  hostname: "localhost",
-  port: 3000,
-  fetch: handler,
+  hostname:
+    process.env.HOST ??
+    "127.0.0.1",
+
+  port:
+    Number(process.env.PORT) ||
+    3000,
+
+  routes: {
+    "/health": new Response("ok"),
+
+    "/api/*": async (request) => {
+      return handler(request);
+    },
+  },
+
+  async fetch(request) {
+    const pathname =
+      new URL(request.url).pathname;
+
+    const file =
+      Bun.file(dist + pathname);
+
+    return new Response(
+      (await file.exists())
+        ? file
+        : Bun.file(
+            `${dist}/index.html`,
+          ),
+    );
+  },
 });
 
-console.log(`EDIT CABINET API listening on ${server.url}`);
+console.log(
+  `EDIT CABINET listening on ${server.url}`,
+);

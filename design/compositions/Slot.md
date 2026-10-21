@@ -1,22 +1,24 @@
 # Slot
 
-A user [creates a personal folder](reaction:Slot.CreateFolder) by providing a folder name. The folder is owned by that user.
+A signed-in user [creates a personal folder](reaction:Slot.CreateFolder) by providing a folder name. The folder is owned by the user identified by their session.
 
-A user [slots a post into a folder](reaction:Slot.AddToFolder) by selecting a folder and a post. The post is added to that folder.
+A signed-in user [slots a post into a folder](reaction:Slot.AddToFolder) by selecting a folder and a post. The post is added only when the folder belongs to that user.
 
-A user [views their folders](reaction:Slot.GetFolders) to see the personal folders they have created.
+A signed-in user [views their folders](reaction:Slot.GetFolders) to see the personal folders they have created.
 
 The [folders for a user](former:Slot.UserFolders) formats all folders owned by the given user for display.
 
-A user [views the contents of a folder](reaction:Slot.GetFolder) to see the posts saved in that folder.
+A signed-in user [views the contents of a folder](reaction:Slot.GetFolder) only when that folder belongs to them.
 
-The [contents of a folder](former:Slot.FolderContents) formats the posts contained in a folder with their media, caption, and author information for display.
+The [contents of a folder](former:Slot.FolderContents) gets each saved post's media, caption, and owner from `Posting._get`, resolves the owner's public username with `Registering._username`, and formats the post for display. The result exposes the cataloger's username rather than the internal user identity.
 
-A user [removes a post from a folder](reaction:Slot.RemoveFromFolder) when they no longer want that post saved in the folder.
+A signed-in user [removes a post from a folder](reaction:Slot.RemoveFromFolder) only when the folder belongs to them.
 
-A user [renames a folder](reaction:Slot.RenameFolder) to change how their saved posts are organized.
+A signed-in user [renames a folder](reaction:Slot.RenameFolder) only when the folder belongs to them.
 
-A user [deletes a folder](reaction:Slot.DeleteFolder) when they no longer want that folder.
+A signed-in user [deletes a folder](reaction:Slot.DeleteFolder) only when the folder belongs to them.
+
+Folder ownership is determined from `Sessioning.use`, not from a user supplied by the request. Attempts to view or modify another user's folder are refused with `FORBIDDEN`.
 
 ```endpoints
 Slot.CreateFolder at /slot/folder/create
@@ -26,5 +28,4 @@ Slot.GetFolder at /slot/folder
 Slot.RemoveFromFolder at /slot/remove
 Slot.RenameFolder at /slot/folder/rename
 Slot.DeleteFolder at /slot/folder/delete
-
 ```

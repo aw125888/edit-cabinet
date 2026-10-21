@@ -3,13 +3,34 @@ import {
   type HttpPolicy,
 } from "@mit-sdg/sync-engine-http/policy";
 
+import { accountsHttp } from "./compositions/reusable/accounts.ts";
+import { passwordsHttp } from "./compositions/reusable/passwords.ts";
+
 export function editCabinetApiPolicy(): HttpPolicy {
   return httpPolicy({
-    publicOrigin: "http://localhost:3000",
+    publicOrigin:
+      process.env.PUBLIC_ORIGIN ??
+      "http://127.0.0.1:3000",
+
     basePath: "/api",
-    publicErrors: {},
-    browser: {
-      origins: ["http://localhost:5173"],
+
+    publicErrors: {
+      ...accountsHttp.publicErrors,
+      ...passwordsHttp.publicErrors,
+
+      FORBIDDEN: "FORBIDDEN",
+
+      FOLDER_NAME_TAKEN: "CONFLICT",
+      ALREADY_IN_FOLDER: "CONFLICT",
+    },
+
+    cookies: {
+      session: {
+        ...accountsHttp.sessionCookie(
+          "edit-cabinet-session",
+          passwordsHttp.startingSessions,
+        ),
+      },
     },
   });
 }

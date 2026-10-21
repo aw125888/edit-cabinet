@@ -14,7 +14,12 @@ import {
 
 import { concepts } from "../concepts.ts";
 
-const { Posting, Collecting, Sessioning } = concepts;
+const {
+  Posting,
+  Collecting,
+  Sessioning,
+  Registering,
+} = concepts;
 
 const UserFolders = former(
   "the folders for user (user)",
@@ -34,7 +39,7 @@ const UserFolders = former(
 
 const FolderContents = former(
   "the contents of folder (folder)",
-  ({ folder }, { item, user, media, caption }) =>
+  ({ folder }, { item, user, username, media, caption }) =>
     form({
       items: each(
         Collecting._itemsIn({ folder }).is({ item }),
@@ -47,8 +52,12 @@ const FolderContents = former(
             media,
             caption,
           }),
+
+          Registering._username({ user }).is({
+            username,
+          }),
         ).form({
-          user,
+          username,
           media,
           caption,
         }),
@@ -126,38 +135,16 @@ const GetFolder = endpoint(
  */
 const CreateFolder = endpoint(
   "/slot/folder/create",
-  ({ session, user, name, folder }) =>
-    receive({ session, name })
-      .then(
-        Sessioning.use({
-          session,
-        }).responds({
-          subject: user,
-        }),
-      )
-      .then(
-        Collecting.createFolder({
-          user,
-          name,
-        }).responds({
-          folder,
-        }),
-      )
-      .then(
-        respond({
-          folder,
-        }),
-      ),
-);
-
-/**
- * Adds a Post only to a folder belonging to
- * the signed-in user.
- */
-const AddToFolder = endpoint(
-  "/slot/add",
-  ({ session, user, folder, post, entry }) =>
-    receive({ session, folder, post })
+  ({
+    session,
+    user,
+    name,
+    folder,
+  }) =>
+    receive({
+      session,
+      name,
+    })
       .then(
         Sessioning.use({
           session,
@@ -167,9 +154,86 @@ const AddToFolder = endpoint(
       )
       .then(
         where(
-          Collecting._foldersFor({ user }).is({
+          no(
+            Collecting._folderNamed({
+              user,
+              name,
+            }),
+          ),
+        )
+          .then(
+            Collecting.createFolder({
+              user,
+              name,
+            }).responds({
+              folder,
+            }),
+          )
+          .then(
+            respond({
+              folder,
+            }),
+          )
+          .named("available-name"),
+
+        where(
+          Collecting._folderNamed({
+            user,
+            name,
+          }).is({}),
+        )
+          .then(
+            respond({
+              error: "FOLDER_NAME_TAKEN",
+            }),
+          )
+          .named("duplicate-name"),
+      ),
+);
+
+/**
+ * Adds a Post only to a folder belonging to
+ * the signed-in user.
+ */
+const AddToFolder = endpoint(
+  "/slot/add",
+  ({
+    session,
+    user,
+    folder,
+    post,
+    entry,
+  }) =>
+    receive({
+      session,
+      folder,
+      post,
+    })
+      .then(
+        Sessioning.use({
+          session,
+        }).responds({
+          subject: user,
+        }),
+      )
+      .then(
+        /*
+         * User owns the folder and the Post
+         * is not already in it.
+         */
+        where(
+          Collecting._foldersFor({
+            user,
+          }).is({
             folder,
           }),
+
+          no(
+            Collecting._itemInFolder({
+              folder,
+              item: post,
+            }),
+          ),
         )
           .then(
             Collecting.addToFolder({
@@ -184,11 +248,39 @@ const AddToFolder = endpoint(
               entry,
             }),
           )
-          .named("owned"),
+          .named("available"),
 
+        /*
+         * User owns the folder, but the Post
+         * is already inside it.
+         */
+        where(
+          Collecting._foldersFor({
+            user,
+          }).is({
+            folder,
+          }),
+
+          Collecting._itemInFolder({
+            folder,
+            item: post,
+          }).is({}),
+        )
+          .then(
+            respond({
+              error: "ALREADY_IN_FOLDER",
+            }),
+          )
+          .named("already-added"),
+
+        /*
+         * User does not own this folder.
+         */
         where(
           no(
-            Collecting._foldersFor({ user }).is({
+            Collecting._foldersFor({
+              user,
+            }).is({
               folder,
             }),
           ),
@@ -257,7 +349,11 @@ const RemoveFromFolder = endpoint(
 const RenameFolder = endpoint(
   "/slot/folder/rename",
   ({ session, user, folder, name }) =>
-    receive({ session, folder, name })
+    receive({
+      session,
+      folder,
+      name,
+    })
       .then(
         Sessioning.use({
           session,
@@ -266,10 +362,23 @@ const RenameFolder = endpoint(
         }),
       )
       .then(
+        /*
+         * User owns this folder and no folder
+         * with the requested name exists.
+         */
         where(
-          Collecting._foldersFor({ user }).is({
+          Collecting._foldersFor({
+            user,
+          }).is({
             folder,
           }),
+
+          no(
+            Collecting._folderNamed({
+              user,
+              name,
+            }),
+          ),
         )
           .then(
             Collecting.renameFolder({
@@ -280,11 +389,39 @@ const RenameFolder = endpoint(
           .then(
             respond({}),
           )
-          .named("owned"),
+          .named("available-name"),
 
+        /*
+         * User owns this folder, but another
+         * folder already uses the requested name.
+         */
+        where(
+          Collecting._foldersFor({
+            user,
+          }).is({
+            folder,
+          }),
+
+          Collecting._folderNamed({
+            user,
+            name,
+          }).is({}),
+        )
+          .then(
+            respond({
+              error: "FOLDER_NAME_TAKEN",
+            }),
+          )
+          .named("duplicate-name"),
+
+        /*
+         * User does not own the folder.
+         */
         where(
           no(
-            Collecting._foldersFor({ user }).is({
+            Collecting._foldersFor({
+              user,
+            }).is({
               folder,
             }),
           ),
@@ -305,7 +442,10 @@ const RenameFolder = endpoint(
 const DeleteFolder = endpoint(
   "/slot/folder/delete",
   ({ session, user, folder }) =>
-    receive({ session, folder })
+    receive({
+      session,
+      folder,
+    })
       .then(
         Sessioning.use({
           session,
@@ -315,8 +455,10 @@ const DeleteFolder = endpoint(
       )
       .then(
         where(
-          Collecting._foldersFor({ user }).is({
+          Collecting._getFolder({
             folder,
+          }).is({
+            user,
           }),
         )
           .then(
@@ -331,8 +473,10 @@ const DeleteFolder = endpoint(
 
         where(
           no(
-            Collecting._foldersFor({ user }).is({
+            Collecting._getFolder({
               folder,
+            }).is({
+              user,
             }),
           ),
         )
@@ -358,3 +502,4 @@ export const slotComposition = {
     DeleteFolder,
   },
 };
+

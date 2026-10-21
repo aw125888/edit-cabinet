@@ -2,7 +2,7 @@ import { endpoint, receive, respond } from "@mit-sdg/sync-engine/boundary";
 import { each, former, where, form, no } from "@mit-sdg/sync-engine/language";
 import { concepts } from "../concepts.ts";
 
-const { Posting, Tagging } = concepts;
+const { Posting, Tagging, Registering } = concepts;
 
 
 const ItemsForTag = former(
@@ -18,16 +18,19 @@ const ItemsForTag = former(
 
 const PostResult = former(
   "the search result for post (post)",
-  ({ post }, { user, media, caption, tag, name, category }) =>
+  ({ post }, { user, username, media, caption, tag, name, category }) =>
     where(
       Posting._get({ post }).is({
         user,
         media,
         caption,
       }),
+      Registering._username({ user }).is({
+        username,
+      }),
     ).form({
       post,
-      user,
+      username,
       media,
       caption,
 
@@ -44,6 +47,7 @@ const PostResult = former(
       }),
     }),
 );
+
 
 const SearchPost = endpoint(
   "/search/post",

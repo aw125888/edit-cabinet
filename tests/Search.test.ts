@@ -6,8 +6,12 @@ import { catalogComposition } from "../src/compositions/Catalog.ts";
 import { searchComposition } from "../src/compositions/Search.ts";
 import { openTestDb, type TestDb } from "./test-db.ts";
 
+import { composition as accounts } from "../src/compositions/reusable/accounts.ts";
+import { composition as passwords } from "../src/compositions/reusable/passwords.ts";
+
 let testDb: TestDb;
 let app: ReturnType<typeof assemble>;
+let session: string;
 
 beforeAll(async () => {
   testDb = await openTestDb();
@@ -22,12 +26,38 @@ beforeEach(async () => {
     composition: {
       ...catalogComposition,
       ...searchComposition,
+
+      reusable: {
+        accounts,
+        passwords,
+      },
     },
 
     instances: applicationConceptSet.implementations("mongo", {
       database: testDb.db,
     }),
   });
+
+  const authResult = await app.invoker.invoke("/auth/register", {
+    username: "amber",
+    password: "password123",
+  });
+
+  if (
+    !authResult.ok ||
+    typeof authResult.value !== "object" ||
+    authResult.value === null ||
+    !("session" in authResult.value) ||
+    typeof authResult.value.session !== "string" ||
+    !("user" in authResult.value) ||
+    typeof authResult.value.user !== "string"
+  ) {
+    throw new Error(
+      "Expected registration to return a user and session",
+    );
+  }
+
+  session = authResult.value.session;
 });
 
 afterAll(async () => {
@@ -36,7 +66,7 @@ afterAll(async () => {
 
 test("searching an existing tag returns its associated post", async () => {
   const postResult = await app.invoker.invoke("/catalog/post", {
-    user: "amber",
+    session,
     media: "https://example.com/video.mp4",
     caption: "Minimalism edit",
   });
@@ -80,7 +110,9 @@ test("searching an existing tag returns its associated post", async () => {
   }
 
   const results = searchResult.value.results as {
-    items: { item: string }[];
+    items: {
+      item: string;
+    }[];
   };
 
   expect(results.items).toHaveLength(1);
@@ -105,15 +137,17 @@ test("searching a nonexistent tag returns no posts", async () => {
   }
 
   const results = result.value.results as {
-    items: { item: string }[];
+    items: {
+      item: string;
+    }[];
   };
 
   expect(results.items).toEqual([]);
 });
 
-test("search post returns post details and all associated tags", async () => {
+test("search post returns post details, cataloger username, and all associated tags", async () => {
   const postResult = await app.invoker.invoke("/catalog/post", {
-    user: "amber",
+    session,
     media: "https://example.com/video.mp4",
     caption: "Daenerys edit",
   });
@@ -130,17 +164,21 @@ test("search post returns post details and all associated tags", async () => {
 
   const post = postResult.value.post;
 
-  await app.invoker.invoke("/catalog/tag", {
+  const firstTagResult = await app.invoker.invoke("/catalog/tag", {
     post,
     name: "Girlhood",
     category: "Aesthetic/Concept",
   });
 
-  await app.invoker.invoke("/catalog/tag", {
+  expect(firstTagResult.ok).toBe(true);
+
+  const secondTagResult = await app.invoker.invoke("/catalog/tag", {
     post,
     name: "Daenerys Targaryen",
     category: "Characters",
   });
+
+  expect(secondTagResult.ok).toBe(true);
 
   const result = await app.invoker.invoke("/search/post", {
     post,
@@ -159,7 +197,7 @@ test("search post returns post details and all associated tags", async () => {
 
   const searchPost = result.value.result as {
     post: string;
-    user: string;
+    username: string;
     media: string;
     caption: string;
     tags: {
@@ -170,8 +208,14 @@ test("search post returns post details and all associated tags", async () => {
   };
 
   expect(searchPost.post).toBe(post);
-  expect(searchPost.user).toBe("amber");
-  expect(searchPost.media).toBe("https://example.com/video.mp4");
+
+  // Search exposes the public username, not the internal User UUID.
+  expect(searchPost.username).toBe("amber");
+
+  expect(searchPost.media).toBe(
+    "https://example.com/video.mp4",
+  );
+
   expect(searchPost.caption).toBe("Daenerys edit");
 
   expect(searchPost.tags).toEqual(
@@ -180,6 +224,7 @@ test("search post returns post details and all associated tags", async () => {
         name: "Girlhood",
         category: "Aesthetic/Concept",
       }),
+
       expect.objectContaining({
         name: "Daenerys Targaryen",
         category: "Characters",

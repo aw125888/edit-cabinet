@@ -71,6 +71,7 @@ renameFolder(folder: Folder, name: String): returns ()
     returns
 ```
 
+
 ## Queries
 
 ```queries
@@ -81,4 +82,13 @@ _foldersFor(user: User): many (folder: Folder, name: String)
 _itemsIn(folder: Folder): many (item: Item)
   answers every item contained in the given folder
   ordered by item
+
+_getFolder(folder: Folder): many (user: User, name: String)
+  answers the owner and name of the given Folder
+
+_folderNamed(user: User, name: String): optional (folder: Folder)
+  answers the Folder owned by the given user with the given name if one exists
+
+_itemInFolder(folder: Folder, item: Item): optional (entry: FolderItem)
+  answers the FolderItem with the given folder and item if one exists
 ```

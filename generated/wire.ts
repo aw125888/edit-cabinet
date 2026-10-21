@@ -14,16 +14,56 @@ export type Json = null | boolean | number | string | Json[] | { [key: string]: 
 export type AppWideError = never;
 
 export type ApplicationWire = {
+  "/auth/login": {
+    input: {
+      "password": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Authenticating"]["authenticate"]>[0], ["password"]>>;
+      "username": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Registering"]["_byUsername"]>[0], ["username"]>>;
+    };
+    output: {
+      "expiresAt": Jsonify<AtPath<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Sessioning"]["start"]>>, ["expiresAt"]>>;
+      "session": Jsonify<AtPath<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Sessioning"]["start"]>>, ["session"]>>;
+      "user": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Sessioning"]["start"]>[0], ["subject"]>>;
+    };
+    error: { error: AppWideError | "INVALID_CREDENTIALS" | "INVALID_INPUT" };
+  };
+  "/auth/logout": {
+    input: {
+      "session": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Sessioning"]["end"]>[0], ["session"]>>;
+    };
+    output: Record<string, never>;
+    error: { error: AppWideError | "INVALID_INPUT" | "NOT_SIGNED_IN" };
+  };
+  "/auth/me": {
+    input: {
+      "session": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Sessioning"]["use"]>[0], ["session"]>>;
+    };
+    output: {
+      "username": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Registering"]["_username"]>>>, ["username"]>>;
+    };
+    error: { error: AppWideError | "INVALID_INPUT" | "NOT_SIGNED_IN" };
+  };
+  "/auth/register": {
+    input: {
+      "password": Jsonify<OneOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Authenticating"]["_acceptable"]>[0], ["password"]>, AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Authenticating"]["set"]>[0], ["password"]>]>>;
+      "username": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Registering"]["register"]>[0], ["username"]>>;
+    };
+    output: {
+      "expiresAt": Jsonify<AtPath<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Sessioning"]["start"]>>, ["expiresAt"]>>;
+      "session": Jsonify<AtPath<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Sessioning"]["start"]>>, ["session"]>>;
+      "user": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Sessioning"]["start"]>[0], ["subject"]>>;
+    };
+    error: { error: AppWideError | "INVALID_INPUT" | "INVALID_PASSWORD" | "INVALID_USERNAME" | "PASSWORD_SET" | "USERNAME_TAKEN" };
+  };
   "/catalog/post": {
     input: {
       "caption": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Posting"]["createPost"]>[0], ["caption"]>>;
       "media": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Posting"]["createPost"]>[0], ["media"]>>;
-      "user": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Posting"]["createPost"]>[0], ["user"]>>;
+      "session": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Sessioning"]["use"]>[0], ["session"]>>;
     };
     output: {
       "post": Jsonify<AtPath<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Posting"]["createPost"]>>, ["post"]>>;
     };
-    error: { error: AppWideError | "INVALID_INPUT" };
+    error: { error: AppWideError | "INVALID_INPUT" | "NOT_SIGNED_IN" };
   };
   "/catalog/tag": {
     input: {
@@ -37,6 +77,67 @@ export type ApplicationWire = {
       "assignment": Jsonify<AtPath<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Tagging"]["tagItem"]>>, ["assignment"]>>;
     };
     error: { error: AppWideError | "INVALID_INPUT" };
+  };
+  "/manage/caption": {
+    input: {
+      "caption": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Posting"]["editCaption"]>[0], ["caption"]>>;
+      "post": Jsonify<OneOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Posting"]["_get"]>[0], ["post"]>, AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Posting"]["editCaption"]>[0], ["post"]>]>>;
+      "session": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Sessioning"]["use"]>[0], ["session"]>>;
+    };
+    output: Record<string, never>;
+    error: { error: AppWideError | "FORBIDDEN" | "INVALID_INPUT" | "NOT_SIGNED_IN" };
+  };
+  "/manage/delete": {
+    input: {
+      "post": Jsonify<OneOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Posting"]["_get"]>[0], ["post"]>, AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Posting"]["deletePost"]>[0], ["post"]>]>>;
+      "session": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Sessioning"]["use"]>[0], ["session"]>>;
+    };
+    output: Record<string, never>;
+    error: { error: AppWideError | "FORBIDDEN" | "INVALID_INPUT" | "NOT_SIGNED_IN" };
+  };
+  "/manage/posts": {
+    input: {
+      "session": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Sessioning"]["use"]>[0], ["session"]>>;
+    };
+    output: {
+      "result": {
+        "posts": {
+          "caption": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Posting"]["_postsBy"]>>>, ["caption"]>>;
+          "media": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Posting"]["_postsBy"]>>>, ["media"]>>;
+          "post": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Posting"]["_postsBy"]>>>, ["post"]>>;
+          "tags": {
+            "assignment": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Tagging"]["_tagsFor"]>>>, ["assignment"]>>;
+            "category": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Tagging"]["_tagsFor"]>>>, ["category"]>>;
+            "name": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Tagging"]["_tagsFor"]>>>, ["name"]>>;
+            "tag": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Tagging"]["_tagsFor"]>>>, ["tag"]>>;
+          }[];
+        }[];
+      };
+    };
+    error: { error: AppWideError | "INVALID_INPUT" | "NOT_SIGNED_IN" };
+  };
+  "/manage/tag/add": {
+    input: {
+      "category": Jsonify<OneOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Tagging"]["_findTag"]>[0], ["category"]>, AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Tagging"]["createTag"]>[0], ["category"]>]>>;
+      "name": Jsonify<OneOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Tagging"]["_findTag"]>[0], ["name"]>, AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Tagging"]["createTag"]>[0], ["name"]>]>>;
+      "post": Jsonify<OneOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Posting"]["_get"]>[0], ["post"]>, AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Tagging"]["tagItem"]>[0], ["item"]>]>>;
+      "session": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Sessioning"]["use"]>[0], ["session"]>>;
+    };
+    output: {
+      "assignment": Jsonify<AtPath<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Tagging"]["tagItem"]>>, ["assignment"]>>;
+    } | {
+      "assignment": Jsonify<AtPath<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Tagging"]["tagItem"]>>, ["assignment"]>>;
+    };
+    error: { error: AppWideError | "FORBIDDEN" | "INVALID_INPUT" | "NOT_SIGNED_IN" };
+  };
+  "/manage/tag/remove": {
+    input: {
+      "assignment": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Tagging"]["untagItem"]>[0], ["assignment"]>>;
+      "post": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Posting"]["_get"]>[0], ["post"]>>;
+      "session": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Sessioning"]["use"]>[0], ["session"]>>;
+    };
+    output: Record<string, never>;
+    error: { error: AppWideError | "FORBIDDEN" | "INVALID_INPUT" | "NOT_SIGNED_IN" };
   };
   "/search/post": {
     input: {
@@ -52,7 +153,7 @@ export type ApplicationWire = {
           "name": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Tagging"]["_tagsFor"]>>>, ["name"]>>;
           "tag": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Tagging"]["_tagsFor"]>>>, ["tag"]>>;
         }[];
-        "user": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Posting"]["_get"]>>>, ["user"]>>;
+        "username": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Registering"]["_username"]>>>, ["username"]>>;
       };
     };
     error: { error: AppWideError | "INVALID_INPUT" };
@@ -77,17 +178,19 @@ export type ApplicationWire = {
   };
   "/slot/add": {
     input: {
-      "folder": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Collecting"]["addToFolder"]>[0], ["folder"]>>;
-      "post": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Collecting"]["addToFolder"]>[0], ["item"]>>;
+      "folder": Jsonify<OneOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Collecting"]["addToFolder"]>[0], ["folder"]>, AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Collecting"]["_foldersFor"]>>>, ["folder"]>]>>;
+      "post": Jsonify<OneOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Collecting"]["_itemInFolder"]>[0], ["item"]>, AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Collecting"]["addToFolder"]>[0], ["item"]>]>>;
+      "session": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Sessioning"]["use"]>[0], ["session"]>>;
     };
     output: {
       "entry": Jsonify<AtPath<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Collecting"]["addToFolder"]>>, ["entry"]>>;
     };
-    error: { error: AppWideError | "INVALID_INPUT" };
+    error: { error: AppWideError | "ALREADY_IN_FOLDER" | "FORBIDDEN" | "INVALID_INPUT" | "NOT_SIGNED_IN" };
   };
   "/slot/folder": {
     input: {
-      "folder": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Collecting"]["_itemsIn"]>[0], ["folder"]>>;
+      "folder": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Collecting"]["_foldersFor"]>>>, ["folder"]>>;
+      "session": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Sessioning"]["use"]>[0], ["session"]>>;
     };
     output: {
       "result": {
@@ -95,42 +198,44 @@ export type ApplicationWire = {
           "details": {
             "caption": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Posting"]["_get"]>>>, ["caption"]>>;
             "media": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Posting"]["_get"]>>>, ["media"]>>;
-            "user": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Posting"]["_get"]>>>, ["user"]>>;
+            "username": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Registering"]["_username"]>>>, ["username"]>>;
           };
           "post": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Collecting"]["_itemsIn"]>>>, ["item"]>>;
         }[];
       };
     };
-    error: { error: AppWideError | "INVALID_INPUT" };
+    error: { error: AppWideError | "FORBIDDEN" | "INVALID_INPUT" | "NOT_SIGNED_IN" };
   };
   "/slot/folder/create": {
     input: {
-      "name": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Collecting"]["createFolder"]>[0], ["name"]>>;
-      "user": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Collecting"]["createFolder"]>[0], ["user"]>>;
+      "name": Jsonify<OneOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Collecting"]["createFolder"]>[0], ["name"]>, AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Collecting"]["_folderNamed"]>[0], ["name"]>]>>;
+      "session": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Sessioning"]["use"]>[0], ["session"]>>;
     };
     output: {
       "folder": Jsonify<AtPath<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Collecting"]["createFolder"]>>, ["folder"]>>;
     };
-    error: { error: AppWideError | "INVALID_INPUT" };
+    error: { error: AppWideError | "FOLDER_NAME_TAKEN" | "INVALID_INPUT" | "NOT_SIGNED_IN" };
   };
   "/slot/folder/delete": {
     input: {
-      "folder": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Collecting"]["deleteFolder"]>[0], ["folder"]>>;
+      "folder": Jsonify<OneOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Collecting"]["_getFolder"]>[0], ["folder"]>, AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Collecting"]["deleteFolder"]>[0], ["folder"]>]>>;
+      "session": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Sessioning"]["use"]>[0], ["session"]>>;
     };
     output: Record<string, never>;
-    error: { error: AppWideError | "INVALID_INPUT" };
+    error: { error: AppWideError | "FORBIDDEN" | "INVALID_INPUT" | "NOT_SIGNED_IN" };
   };
   "/slot/folder/rename": {
     input: {
-      "folder": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Collecting"]["renameFolder"]>[0], ["folder"]>>;
-      "name": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Collecting"]["renameFolder"]>[0], ["name"]>>;
+      "folder": Jsonify<OneOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Collecting"]["renameFolder"]>[0], ["folder"]>, AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Collecting"]["_foldersFor"]>>>, ["folder"]>]>>;
+      "name": Jsonify<OneOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Collecting"]["renameFolder"]>[0], ["name"]>, AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Collecting"]["_folderNamed"]>[0], ["name"]>]>>;
+      "session": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Sessioning"]["use"]>[0], ["session"]>>;
     };
     output: Record<string, never>;
-    error: { error: AppWideError | "INVALID_INPUT" };
+    error: { error: AppWideError | "FOLDER_NAME_TAKEN" | "FORBIDDEN" | "INVALID_INPUT" | "NOT_SIGNED_IN" };
   };
   "/slot/folders": {
     input: {
-      "user": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Collecting"]["_foldersFor"]>[0], ["user"]>>;
+      "session": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Sessioning"]["use"]>[0], ["session"]>>;
     };
     output: {
       "result": {
@@ -140,31 +245,63 @@ export type ApplicationWire = {
         }[];
       };
     };
-    error: { error: AppWideError | "INVALID_INPUT" };
+    error: { error: AppWideError | "INVALID_INPUT" | "NOT_SIGNED_IN" };
   };
   "/slot/remove": {
     input: {
-      "folder": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Collecting"]["removeFromFolder"]>[0], ["folder"]>>;
+      "folder": Jsonify<OneOf<[AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Collecting"]["_foldersFor"]>>>, ["folder"]>, AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Collecting"]["removeFromFolder"]>[0], ["folder"]>]>>;
       "post": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Collecting"]["removeFromFolder"]>[0], ["item"]>>;
+      "session": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Sessioning"]["use"]>[0], ["session"]>>;
     };
     output: Record<string, never>;
-    error: { error: AppWideError | "INVALID_INPUT" };
+    error: { error: AppWideError | "FORBIDDEN" | "INVALID_INPUT" | "NOT_SIGNED_IN" };
   };
 };
 
 export type HttpAppWideError = never;
 
 export type ApplicationWireHttp = {
+  "/auth/login": {
+    input: {
+      "password": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Authenticating"]["authenticate"]>[0], ["password"]>>;
+      "username": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Registering"]["_byUsername"]>[0], ["username"]>>;
+    };
+    output: {
+      "user": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Sessioning"]["start"]>[0], ["subject"]>>;
+    };
+    error: { error: HttpAppWideError | "INVALID_REQUEST" | "UNAUTHORIZED" };
+  };
+  "/auth/logout": {
+    input: Record<string, never>;
+    output: Record<string, never>;
+    error: { error: HttpAppWideError | "INVALID_REQUEST" | "UNAUTHORIZED" };
+  };
+  "/auth/me": {
+    input: Record<string, never>;
+    output: {
+      "username": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Registering"]["_username"]>>>, ["username"]>>;
+    };
+    error: { error: HttpAppWideError | "INVALID_REQUEST" | "UNAUTHORIZED" };
+  };
+  "/auth/register": {
+    input: {
+      "password": Jsonify<OneOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Authenticating"]["_acceptable"]>[0], ["password"]>, AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Authenticating"]["set"]>[0], ["password"]>]>>;
+      "username": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Registering"]["register"]>[0], ["username"]>>;
+    };
+    output: {
+      "user": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Sessioning"]["start"]>[0], ["subject"]>>;
+    };
+    error: { error: HttpAppWideError | "CONFLICT" | "INVALID_REQUEST" };
+  };
   "/catalog/post": {
     input: {
       "caption": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Posting"]["createPost"]>[0], ["caption"]>>;
       "media": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Posting"]["createPost"]>[0], ["media"]>>;
-      "user": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Posting"]["createPost"]>[0], ["user"]>>;
     };
     output: {
       "post": Jsonify<AtPath<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Posting"]["createPost"]>>, ["post"]>>;
     };
-    error: { error: HttpAppWideError | "INVALID_REQUEST" };
+    error: { error: HttpAppWideError | "INVALID_REQUEST" | "UNAUTHORIZED" };
   };
   "/catalog/tag": {
     input: {
@@ -178,6 +315,61 @@ export type ApplicationWireHttp = {
       "assignment": Jsonify<AtPath<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Tagging"]["tagItem"]>>, ["assignment"]>>;
     };
     error: { error: HttpAppWideError | "INVALID_REQUEST" };
+  };
+  "/manage/caption": {
+    input: {
+      "caption": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Posting"]["editCaption"]>[0], ["caption"]>>;
+      "post": Jsonify<OneOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Posting"]["_get"]>[0], ["post"]>, AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Posting"]["editCaption"]>[0], ["post"]>]>>;
+    };
+    output: Record<string, never>;
+    error: { error: HttpAppWideError | "FORBIDDEN" | "INVALID_REQUEST" | "UNAUTHORIZED" };
+  };
+  "/manage/delete": {
+    input: {
+      "post": Jsonify<OneOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Posting"]["_get"]>[0], ["post"]>, AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Posting"]["deletePost"]>[0], ["post"]>]>>;
+    };
+    output: Record<string, never>;
+    error: { error: HttpAppWideError | "FORBIDDEN" | "INVALID_REQUEST" | "UNAUTHORIZED" };
+  };
+  "/manage/posts": {
+    input: Record<string, never>;
+    output: {
+      "result": {
+        "posts": {
+          "caption": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Posting"]["_postsBy"]>>>, ["caption"]>>;
+          "media": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Posting"]["_postsBy"]>>>, ["media"]>>;
+          "post": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Posting"]["_postsBy"]>>>, ["post"]>>;
+          "tags": {
+            "assignment": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Tagging"]["_tagsFor"]>>>, ["assignment"]>>;
+            "category": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Tagging"]["_tagsFor"]>>>, ["category"]>>;
+            "name": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Tagging"]["_tagsFor"]>>>, ["name"]>>;
+            "tag": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Tagging"]["_tagsFor"]>>>, ["tag"]>>;
+          }[];
+        }[];
+      };
+    };
+    error: { error: HttpAppWideError | "INVALID_REQUEST" | "UNAUTHORIZED" };
+  };
+  "/manage/tag/add": {
+    input: {
+      "category": Jsonify<OneOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Tagging"]["_findTag"]>[0], ["category"]>, AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Tagging"]["createTag"]>[0], ["category"]>]>>;
+      "name": Jsonify<OneOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Tagging"]["_findTag"]>[0], ["name"]>, AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Tagging"]["createTag"]>[0], ["name"]>]>>;
+      "post": Jsonify<OneOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Posting"]["_get"]>[0], ["post"]>, AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Tagging"]["tagItem"]>[0], ["item"]>]>>;
+    };
+    output: {
+      "assignment": Jsonify<AtPath<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Tagging"]["tagItem"]>>, ["assignment"]>>;
+    } | {
+      "assignment": Jsonify<AtPath<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Tagging"]["tagItem"]>>, ["assignment"]>>;
+    };
+    error: { error: HttpAppWideError | "FORBIDDEN" | "INVALID_REQUEST" | "UNAUTHORIZED" };
+  };
+  "/manage/tag/remove": {
+    input: {
+      "assignment": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Tagging"]["untagItem"]>[0], ["assignment"]>>;
+      "post": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Posting"]["_get"]>[0], ["post"]>>;
+    };
+    output: Record<string, never>;
+    error: { error: HttpAppWideError | "FORBIDDEN" | "INVALID_REQUEST" | "UNAUTHORIZED" };
   };
   "/search/post": {
     input: {
@@ -193,7 +385,7 @@ export type ApplicationWireHttp = {
           "name": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Tagging"]["_tagsFor"]>>>, ["name"]>>;
           "tag": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Tagging"]["_tagsFor"]>>>, ["tag"]>>;
         }[];
-        "user": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Posting"]["_get"]>>>, ["user"]>>;
+        "username": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Registering"]["_username"]>>>, ["username"]>>;
       };
     };
     error: { error: HttpAppWideError | "INVALID_REQUEST" };
@@ -218,17 +410,17 @@ export type ApplicationWireHttp = {
   };
   "/slot/add": {
     input: {
-      "folder": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Collecting"]["addToFolder"]>[0], ["folder"]>>;
-      "post": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Collecting"]["addToFolder"]>[0], ["item"]>>;
+      "folder": Jsonify<OneOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Collecting"]["addToFolder"]>[0], ["folder"]>, AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Collecting"]["_foldersFor"]>>>, ["folder"]>]>>;
+      "post": Jsonify<OneOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Collecting"]["_itemInFolder"]>[0], ["item"]>, AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Collecting"]["addToFolder"]>[0], ["item"]>]>>;
     };
     output: {
       "entry": Jsonify<AtPath<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Collecting"]["addToFolder"]>>, ["entry"]>>;
     };
-    error: { error: HttpAppWideError | "INVALID_REQUEST" };
+    error: { error: HttpAppWideError | "CONFLICT" | "FORBIDDEN" | "INVALID_REQUEST" | "UNAUTHORIZED" };
   };
   "/slot/folder": {
     input: {
-      "folder": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Collecting"]["_itemsIn"]>[0], ["folder"]>>;
+      "folder": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Collecting"]["_foldersFor"]>>>, ["folder"]>>;
     };
     output: {
       "result": {
@@ -236,43 +428,40 @@ export type ApplicationWireHttp = {
           "details": {
             "caption": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Posting"]["_get"]>>>, ["caption"]>>;
             "media": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Posting"]["_get"]>>>, ["media"]>>;
-            "user": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Posting"]["_get"]>>>, ["user"]>>;
+            "username": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Registering"]["_username"]>>>, ["username"]>>;
           };
           "post": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Collecting"]["_itemsIn"]>>>, ["item"]>>;
         }[];
       };
     };
-    error: { error: HttpAppWideError | "INVALID_REQUEST" };
+    error: { error: HttpAppWideError | "FORBIDDEN" | "INVALID_REQUEST" | "UNAUTHORIZED" };
   };
   "/slot/folder/create": {
     input: {
-      "name": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Collecting"]["createFolder"]>[0], ["name"]>>;
-      "user": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Collecting"]["createFolder"]>[0], ["user"]>>;
+      "name": Jsonify<OneOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Collecting"]["createFolder"]>[0], ["name"]>, AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Collecting"]["_folderNamed"]>[0], ["name"]>]>>;
     };
     output: {
       "folder": Jsonify<AtPath<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Collecting"]["createFolder"]>>, ["folder"]>>;
     };
-    error: { error: HttpAppWideError | "INVALID_REQUEST" };
+    error: { error: HttpAppWideError | "CONFLICT" | "INVALID_REQUEST" | "UNAUTHORIZED" };
   };
   "/slot/folder/delete": {
     input: {
-      "folder": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Collecting"]["deleteFolder"]>[0], ["folder"]>>;
+      "folder": Jsonify<OneOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Collecting"]["_getFolder"]>[0], ["folder"]>, AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Collecting"]["deleteFolder"]>[0], ["folder"]>]>>;
     };
     output: Record<string, never>;
-    error: { error: HttpAppWideError | "INVALID_REQUEST" };
+    error: { error: HttpAppWideError | "FORBIDDEN" | "INVALID_REQUEST" | "UNAUTHORIZED" };
   };
   "/slot/folder/rename": {
     input: {
-      "folder": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Collecting"]["renameFolder"]>[0], ["folder"]>>;
-      "name": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Collecting"]["renameFolder"]>[0], ["name"]>>;
+      "folder": Jsonify<OneOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Collecting"]["renameFolder"]>[0], ["folder"]>, AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Collecting"]["_foldersFor"]>>>, ["folder"]>]>>;
+      "name": Jsonify<OneOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Collecting"]["renameFolder"]>[0], ["name"]>, AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Collecting"]["_folderNamed"]>[0], ["name"]>]>>;
     };
     output: Record<string, never>;
-    error: { error: HttpAppWideError | "INVALID_REQUEST" };
+    error: { error: HttpAppWideError | "CONFLICT" | "FORBIDDEN" | "INVALID_REQUEST" | "UNAUTHORIZED" };
   };
   "/slot/folders": {
-    input: {
-      "user": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Collecting"]["_foldersFor"]>[0], ["user"]>>;
-    };
+    input: Record<string, never>;
     output: {
       "result": {
         "folders": {
@@ -281,14 +470,14 @@ export type ApplicationWireHttp = {
         }[];
       };
     };
-    error: { error: HttpAppWideError | "INVALID_REQUEST" };
+    error: { error: HttpAppWideError | "INVALID_REQUEST" | "UNAUTHORIZED" };
   };
   "/slot/remove": {
     input: {
-      "folder": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Collecting"]["removeFromFolder"]>[0], ["folder"]>>;
+      "folder": Jsonify<OneOf<[AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Collecting"]["_foldersFor"]>>>, ["folder"]>, AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Collecting"]["removeFromFolder"]>[0], ["folder"]>]>>;
       "post": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Collecting"]["removeFromFolder"]>[0], ["item"]>>;
     };
     output: Record<string, never>;
-    error: { error: HttpAppWideError | "INVALID_REQUEST" };
+    error: { error: HttpAppWideError | "FORBIDDEN" | "INVALID_REQUEST" | "UNAUTHORIZED" };
   };
 };

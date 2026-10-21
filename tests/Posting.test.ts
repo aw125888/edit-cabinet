@@ -98,3 +98,53 @@ test("_get returns no row for a nonexistent post", async () => {
 
   expect(results).toEqual([]);
 });
+
+
+test("_postsBy returns all posts cataloged by a user", async () => {
+  const first = await posting.createPost({
+    user: "amber",
+    media: "video-1",
+    caption: "First edit",
+  });
+
+  const second = await posting.createPost({
+    user: "amber",
+    media: "video-2",
+    caption: "Second edit",
+  });
+
+  await posting.createPost({
+    user: "bob",
+    media: "video-3",
+    caption: "Bob edit",
+  });
+
+  const posts = await posting._postsBy({
+    user: "amber",
+  });
+
+  expect(posts).toHaveLength(2);
+
+  expect(posts).toEqual(
+    expect.arrayContaining([
+      {
+        post: first.post,
+        media: "video-1",
+        caption: "First edit",
+      },
+      {
+        post: second.post,
+        media: "video-2",
+        caption: "Second edit",
+      },
+    ]),
+  );
+});
+
+test("_postsBy returns no posts for a user with no cataloged posts", async () => {
+  const posts = await posting._postsBy({
+    user: "nobody",
+  });
+
+  expect(posts).toEqual([]);
+});

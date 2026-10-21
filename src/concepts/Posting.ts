@@ -67,6 +67,20 @@ export class PostingConcept<User extends string, Item extends string> {
         }];
         }
 
+    async _postsBy(
+  { user }: { user: User }
+): Promise<{ post: string; media: Item; caption: string }[]> {
+  const found = await this.posts
+    .find({ author: user })
+    .toArray();
+
+  return found.map((post) => ({
+    post: post._id,
+    media: post.media,
+    caption: post.caption,
+  }));
+}
+
 
 
 }

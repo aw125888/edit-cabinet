@@ -6,6 +6,7 @@ import { searchComposition } from "./compositions/Search.ts";
 import {slotComposition} from "./compositions/Slot.ts";
 import { composition as accounts } from "./compositions/reusable/accounts.ts";
 import { composition as passwords } from "./compositions/reusable/passwords.ts";
+import { manageComposition } from "./compositions/Manage.ts";
 
 export function assembleApplication() {
   return assemble({
@@ -14,6 +15,7 @@ export function assembleApplication() {
   ...catalogComposition,
   ...searchComposition,
   ...slotComposition,
+  ...manageComposition,
 
   reusable: {
     accounts,

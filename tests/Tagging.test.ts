@@ -184,21 +184,25 @@ test("_tagsFor returns all tags assigned to an item", async () => {
 
   expect(results).toHaveLength(2);
 
-  expect(results).toEqual(
-    expect.arrayContaining([
-      {
-        tag: aesthetic,
-        name: "Girlhood",
-        category: "Aesthetic/Concept",
-      },
-      {
-        tag: character,
-        name: "Daenerys Targaryen",
-        category: "Characters",
-      },
-    ]),
-  );
-});
+expect(results).toEqual(
+  expect.arrayContaining([
+    expect.objectContaining({
+      tag: aesthetic,
+      name: "Girlhood",
+      category: "Aesthetic/Concept",
+      assignment: expect.any(String),
+    }),
+
+    expect.objectContaining({
+      tag: character,
+      name: "Daenerys Targaryen",
+      category: "Characters",
+      assignment: expect.any(String),
+    }),
+  ]),
+);
+})
+
 
 test("_findTag is case insensitive", async () => {
   const { tag } = await tagging.createTag({
@@ -213,6 +217,7 @@ test("_findTag is case insensitive", async () => {
 
   expect(result).toEqual([{ tag }]);
 });
+
 
 
 test("createTag rejects tags differing only by case", async () => {

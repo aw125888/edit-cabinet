@@ -262,4 +262,78 @@ export class CollectingConcept<
       item: entry.item,
     }));
   }
+
+  async _getFolder({
+  folder,
+}: {
+  folder: string;
+}): Promise<{ user: User; name: string }[]> {
+  await this.ready;
+
+  const found = await this.folders.findOne({
+    _id: folder,
+  });
+
+  if (found === null) {
+    return [];
+  }
+
+  return [
+    {
+      user: found.owner,
+      name: found.name,
+    },
+  ];
 }
+
+async _folderNamed({
+  user,
+  name,
+}: {
+  user: User;
+  name: string;
+}): Promise<{ folder: string }[]> {
+  await this.ready;
+
+  const folder = await this.folders.findOne({
+    owner: user,
+    name,
+  });
+
+  if (!folder) {
+    return [];
+  }
+
+  return [
+    {
+      folder: folder._id,
+    },
+  ];
+}
+
+async _itemInFolder({
+  folder,
+  item,
+}: {
+  folder: string;
+  item: Item;
+}): Promise<{ entry: string }[]> {
+  await this.ready;
+
+  const entry = await this.folderItems.findOne({
+    folder,
+    item,
+  });
+
+  if (!entry) {
+    return [];
+  }
+
+  return [
+    {
+      entry: entry._id,
+    },
+  ];
+}
+}
+

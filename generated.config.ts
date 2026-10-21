@@ -23,6 +23,10 @@ export default {
         "./design/compositions/reusable/passwords.md",
         import.meta.url,
       ),
+      new URL(
+  "./design/compositions/Manage.md",
+  import.meta.url,
+),
     ],
   },
 

@@ -207,3 +207,4 @@ test("catalog creates a missing tag and attaches it to the post", async () => {
 
   expect(assignment).not.toBeNull();
 });
+

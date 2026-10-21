@@ -180,44 +180,47 @@ export class TaggingConcept<
   }
 
   async _tagsFor({
-    item,
-  }: {
-    item: Item;
-  }): Promise<
-    {
-      tag: string;
-      name: string;
-      category: Category;
-    }[]
-  > {
-    const assignments = await this.tagAssignments
-      .find({ item })
-      .toArray();
+  item,
+}: {
+  item: Item;
+}): Promise<
+  {
+    assignment: string;
+    tag: string;
+    name: string;
+    category: Category;
+  }[]
+> {
+  const assignments = await this.tagAssignments
+    .find({ item })
+    .toArray();
 
-    const results: {
-      tag: string;
-      name: string;
-      category: Category;
-    }[] = [];
+  const results: {
+    assignment: string;
+    tag: string;
+    name: string;
+    category: Category;
+  }[] = [];
 
-    for (const assignment of assignments) {
-      const tag = await this.tags.findOne({
-        _id: assignment.tag,
+  for (const assignment of assignments) {
+    const tag = await this.tags.findOne({
+      _id: assignment.tag,
+    });
+
+    if (tag !== null) {
+      results.push({
+        assignment: assignment._id,
+        tag: tag._id,
+        name: tag.name,
+        category: tag.category,
       });
-
-      if (tag !== null) {
-        results.push({
-          tag: tag._id,
-          name: tag.name,
-          category: tag.category,
-        });
-      }
     }
-
-    results.sort((a, b) =>
-      a.tag.localeCompare(b.tag),
-    );
-
-    return results;
   }
+
+  results.sort((a, b) =>
+    a.tag.localeCompare(b.tag),
+  );
+
+  return results;
+}
 }
