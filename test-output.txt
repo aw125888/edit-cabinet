@@ -1,0 +1,91 @@
+$ TEST_MONGO=memory bun test
+bun test v1.4.2 (744846f84)
+
+tests/Auth.test.ts:
+(pass) a user can register and use their session [243.83ms]
+(pass) a registered user can sign in with their password [286.95ms]
+(pass) sign in rejects an incorrect password [267.24ms]
+(pass) registration rejects a duplicate username [209.38ms]
+(pass) a user can sign out and the session can no longer be used [233.35ms]
+(pass) registration rejects an invalid password [1.92ms]
+
+tests/Slot.test.ts:
+(pass) slot creates a personal folder [329.21ms]
+(pass) slot adds a post to a folder [280.85ms]
+(pass) slot returns all folders for a user [269.05ms]
+(pass) slot returns the post details inside a folder [290.60ms]
+(pass) slot renames a folder [287.59ms]
+(pass) slot deletes a folder [258.82ms]
+(pass) slot removes a post from a folder [281.31ms]
+(pass) a user cannot access another user's folder [262.80ms]
+(pass) a user cannot add a post to another user's folder [276.76ms]
+(pass) a user cannot remove a post from another user's folder [273.71ms]
+(pass) a user cannot rename another user's folder [276.74ms]
+(pass) a user cannot delete another user's folder [290.16ms]
+(pass) deleting one folder preserves the user's other folders [294.17ms]
+(pass) creating a duplicate folder returns FOLDER_NAME_TAKEN [338.24ms]
+(pass) adding the same post to a folder twice returns ALREADY_IN_FOLDER [297.22ms]
+(pass) renaming a folder to an existing folder name returns FOLDER_NAME_TAKEN [261.53ms]
+
+tests/Manage.test.ts:
+(pass) manage returns only the signed-in user's posts [350.20ms]
+(pass) a user can edit the caption of their own post [275.07ms]
+(pass) a user cannot edit another user's post [269.26ms]
+(pass) a user cannot delete another user's post [293.40ms]
+(pass) deleting a post removes its tags and all folder references [295.41ms]
+(pass) a user can add a new tag to their own post [282.67ms]
+(pass) a user can remove one tag from their own post without removing the others [304.45ms]
+(pass) a user cannot add a tag to another user's post [305.58ms]
+(pass) a user cannot remove a tag from another user's post [302.47ms]
+
+tests/Catalog.test.ts:
+(pass) catalog creates a post and attaches its tags [284.74ms]
+(pass) catalog reuses an existing tag instead of creating a duplicate [221.58ms]
+(pass) catalog creates a missing tag and attaches it to the post [214.55ms]
+
+tests/Search.test.ts:
+(pass) searching an existing tag returns its associated post [291.86ms]
+(pass) searching a nonexistent tag returns no posts [208.89ms]
+(pass) search post returns post details, cataloger username, and all associated tags [233.91ms]
+
+tests/Tagging.test.ts:
+(pass) createTag returns a tag identity [68.43ms]
+(pass) tagItem creates a tag assignment [53.31ms]
+(pass) untagItem removes a tag assignment [52.42ms]
+(pass) untagAll removes all tag assignments for an item [50.10ms]
+(pass) itemsFor returns all items for a given tag [48.40ms]
+(pass) createTag throws an error for duplicate tags [51.39ms]
+(pass) tagItem throws an error for non-existent tag [51.04ms]
+(pass) untagItem throws an error for non-existent assignment [4.05ms]
+(pass) tagItem throws an error for duplicate assignment [116.66ms]
+(pass) findTag returns the tag ID for an existing tag [49.82ms]
+(pass) findTag returns null for a non-existent tag [1.94ms]
+(pass) _tagsFor returns all tags assigned to an item [111.61ms]
+(pass) _findTag is case insensitive [52.84ms]
+(pass) createTag rejects tags differing only by case [53.56ms]
+
+tests/Collecting.test.ts:
+(pass) a user can create a folder and add an item to it [75.78ms]
+(pass) a user can remove an item from a folder [47.86ms]
+(pass) a user can rename a folder [48.53ms]
+(pass) deleting a folder removes the folder and its items [47.23ms]
+(pass) removeFromAllFolders removes an item from every folder [46.07ms]
+(pass) a user cannot create two folders with the same name [52.28ms]
+(pass) the same item cannot be added to the same folder twice [48.25ms]
+(pass) a user cannot rename a folder to another folder's name [49.21ms]
+
+tests/Posting.test.ts:
+(pass) createPost returns a post identity [30.82ms]
+(pass) editCaption updates the caption of an existing post [26.84ms]
+(pass) deletePost removes an existing post [23.08ms]
+(pass) deletePost throws an error when trying to delete a non-existent post [1.01ms]
+(pass) editCaption throws an error when trying to edit a non-existent post [0.67ms]
+(pass) _get returns an existing post [17.21ms]
+(pass) _get returns no row for a nonexistent post [0.62ms]
+(pass) _postsBy returns all posts cataloged by a user [16.88ms]
+(pass) _postsBy returns no posts for a user with no cataloged posts [0.61ms]
+
+ 68 pass
+ 0 fail
+ 175 expect() calls
+Ran 68 tests across 8 files. [16.35s]

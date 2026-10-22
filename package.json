@@ -17,6 +17,8 @@
     "generate": "sync-engine artifacts pin",
     "check": "sync-engine check && sync-engine artifacts check && tsc --noEmit",
     "build": "bun run --cwd frontend build",
-    "start": "bun src/main.ts"
+    "start": "bun src/main.ts",
+    "test": "bun test",
+    "test:memory": "TEST_MONGO=memory bun test"
   }
 }

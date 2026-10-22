@@ -1,30 +1,29 @@
-Styling and Layout. Turn to the aesthetic aspects of your user interface design. Drawing on your design study, make choices for the layout of your components, as well as the colors and typography they use, to provide a usable, accessible, and pleasant experience for your users.
+## Annotations on Visual Design Choices
 
-Think about how you can use these different aspects of style to convey importance (e.g., using colors to indicate successes or errors) or an order of operations (e.g., left or right sidebars, or heading levels to suggest an outline). Annotate your visual design study to explain which choices you used in your interface and why.
+### 1. Heading Typography
 
+For every primary heading on the site, I use MontellaCracken to create a clear divide between the title and subtext, as well as provide a quick briefing of what each page entails. My frontend is comprised of six views, each of which contains one instance of MontellaCracken text. The font is visually appealing because of its whimsical, cursive-like shape. MontellaCracken is also consistently the largest text on each screen, making it the focal point and the first place viewers pay attention to. I use this prominence to quickly communicate each page's purpose through titles such as "Search," "Cataloged by Me," and "My Personal Collections."
 
+### 2. Subtext Typography
 
-Annotations on Visual Design Choices: 
+The subtext is either Times New Roman or Arial, chosen for their standard and minimalistic shapes. Times New Roman is used for subtitles, while Arial is used for associated subtext. Because the site functions as a digital archive, it is important that its visual design does not feel cluttered. MontellaCracken already serves as the focal point of each page, so the subtext remains simple and clean to provide balance.
 
-1. Heading Typography: 
+### 3. Imagery
 
-    For every heading on the site, I use MontellaCracken to demonstrate a clear divide between subtext and title, as well as provide a clear briefing of what each page entails. My Frontend is comprised of 6 views, each of which possesses one instance of MontellaCracken text. The font itself is visually appealing, given its whimsical and cursive-like shape. The MontellaCracken text is also always size __, by far the largest text available on each screen compared to the size __ subtext. This makes it the focal point of each screen, the portion where viewers first pay attention too. Thus, I use this as an opportunity to provide a quick briefing of each page's purpose by modifying the title content to fit that. "Search", "Cataloged by Me", "My Personal Collections", etc. each quickly reveal its associated page's purpose. 
+The images on the home screen serve to remind users of the site's purpose as a video-edit organizer. Seemingly random images, both in content and color, are displayed in moving reels on each side of the home page. This demonstrates the diversity of video-edit content and the subsequent need for a detailed method of categorization.
 
-2. Subtext Typography: 
-    The subtext is either Times New Roman or Arial, chosen for their standard and minimalistic shape. Times New Roman is used for subtitles and Arial for associated subtext. Due to the site's status as a digital archive, it's important that its visual design isn't cluttered. As established above, MontellaCracken is already used on each page as the focal point. Thus, in order to provide balance, the subtext has to be very simple and clean. 
+The stack of books displayed on the My Personal Collections page provides visual dynamism while also serving as a visual indicator of how the Slot composition works. The flashing color graphics on the Catalog page are inspired by the artwork of painter Byron Kim. They further the "rainbow on white" palette of the website while providing a fun, abstract visualization of categorization: placing something, in this case an edit, into several representative boxes.
 
-3. Imagery: 
-    The images on the home screen serve to remind users of the site's purpose as a video-edit organizer. Seemingly random (both in terms of content and color) images are displayed in moving reels on each side of the home page. This is to demonstrate the diversity of the content of video-edits as well as the subsequent need for a detailed method of categorization. The stack of books displayed on the My Cabinet Page aims to provide visual dynamism to the website as well as serve as a clear visual indicator of how the Slot Composition works. The flashing color graphics present on the Catalog page is inspired by the artwork of painter Byron Kim. Its meant to further the "rainbow on white" palatte of the entire website as well as provide a fun, abstract visualization of categorization, of placing something (an edit) in several representative boxes. 
- 
+### 4. Palette
 
-4. Palette: 
-    The color palette can be simplified generally to "rainbow on white". Edit Cabinet aims to preserve the diversity prevalent within each video-edit. This diversity serves to render video-edits as very "colorful" forms of media. However, edit-cabinet is at the same time a digital archive, and has to appear organized. Thus, "rainbow on white" seeks to preserve both an archive's organized nature as well as a video-edit's colorful nature. On each page, whether from the title or available graphics, specific pops of color are available. The rest of the page is comprised of white space and dark text, providing further emphasis upon the pops of color while preserving a sense of serenity and cleanliness. 
+The site's color palette can generally be simplified to "rainbow on white." Edit Cabinet aims to preserve the diversity present within each video edit, which makes video edits very "colorful" forms of media. At the same time, Edit Cabinet is a digital archive and therefore needs to appear organized.
 
-5. Reaction + Button Colors 
-    All delete reactions are red and all content update reactions are green.
+"Rainbow on white" seeks to preserve both the organized nature of an archive and the colorful nature of video edits. On each page, specific pops of color appear through the title or available graphics. The rest of the page consists of white space and dark text, further emphasizing these pops of color while preserving a sense of serenity and cleanliness.
 
-5. Page Divisions: (put in design notebook)
-    The home page only displays buttons that lead to the Categorize and Search page. The other views (My Cabinet, My Edits) are universally available under the profile icon on the top right. This decision was made because actions should be distinguished from ownership. No personal account owns the search or categorize action but each personal account is linked to a personal cabinet and cataloged edits. 
+### 5. Reaction + Button Colors
 
+Actions that update or modify content use green, while actions that destroy or remove content use red. This creates a clear visual divide between the two available classes of actions.
 
+### 6. Layout
 
+I use lots of white space to create a serene and organized atmosphere. Graphics and other content are organized into set grids and structures, while titles are centered to further reinforce this sense of cleanliness.
