@@ -16,7 +16,7 @@ EDIT CABINET is a detailed archive for edits that preserves their context and le
 ## P3: Beta
 
 - [Updated User Journey](user-journey.md)
-- [Visual Design Study Slides](P3%20Visual%20Inspo.pdf)
+- [Visual Design Study Slides](P3%20Visual%20Inspo%20.pdf)
 - [Visual Design Study Annotations](p3visualdesign.md)
 - [P3 Screen Recording](https://youtu.be/5a6uJyhUMGA?si=w5SzxXwwb7_l36fX)
 
