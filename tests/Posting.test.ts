@@ -148,3 +148,71 @@ test("_postsBy returns no posts for a user with no cataloged posts", async () =>
 
   expect(posts).toEqual([]);
 });
+
+
+test(
+  "createPost rejects duplicate media",
+  async () => {
+    await posting.createPost({
+      user: "amber",
+      media:
+        "https://example.com/same-video",
+      caption: "First catalog",
+    });
+
+    await expect(
+      posting.createPost({
+        user: "bob",
+        media:
+          "https://example.com/same-video",
+        caption: "Second catalog",
+      }),
+    ).rejects.toThrow(
+      "A Post with this media already exists.",
+    );
+
+    const posts =
+      await testDb.db
+        .collection<
+          Post<string, string>
+        >("posting.posts")
+        .find({
+          media:
+            "https://example.com/same-video",
+        })
+        .toArray();
+
+    expect(posts).toHaveLength(1);
+    expect(posts[0]?.author).toBe(
+      "amber",
+    );
+  },
+);
+
+
+test("_getByMedia returns the post for existing media", async () => {
+  const { post } =
+    await posting.createPost({
+      user: "amber",
+      media: "https://example.com/video",
+      caption: "test",
+    });
+
+  const results =
+    await posting._getByMedia({
+      media: "https://example.com/video",
+    });
+
+  expect(results).toEqual([
+    { post },
+  ]);
+});
+
+test("_getByMedia returns no row for nonexistent media", async () => {
+  const results =
+    await posting._getByMedia({
+      media: "https://example.com/missing",
+    });
+
+  expect(results).toEqual([]);
+});

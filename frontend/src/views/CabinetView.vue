@@ -126,6 +126,9 @@ function friendlyError(error: string) {
 
     case "INVALID_REQUEST":
       return "That request could not be completed.";
+    
+    case "CONFLICT":
+      return "This video has already been cataloged.";
 
     default:
       return "Something went wrong. Please try again.";

@@ -57,13 +57,13 @@ export type ApplicationWire = {
   "/catalog/post": {
     input: {
       "caption": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Posting"]["createPost"]>[0], ["caption"]>>;
-      "media": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Posting"]["createPost"]>[0], ["media"]>>;
+      "media": Jsonify<OneOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Posting"]["_getByMedia"]>[0], ["media"]>, AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Posting"]["createPost"]>[0], ["media"]>]>>;
       "session": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Sessioning"]["use"]>[0], ["session"]>>;
     };
     output: {
       "post": Jsonify<AtPath<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Posting"]["createPost"]>>, ["post"]>>;
     };
-    error: { error: AppWideError | "INVALID_INPUT" | "NOT_SIGNED_IN" };
+    error: { error: AppWideError | "INVALID_INPUT" | "MEDIA_ALREADY_CATALOGED" | "NOT_SIGNED_IN" };
   };
   "/catalog/tag": {
     input: {
@@ -296,12 +296,12 @@ export type ApplicationWireHttp = {
   "/catalog/post": {
     input: {
       "caption": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Posting"]["createPost"]>[0], ["caption"]>>;
-      "media": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Posting"]["createPost"]>[0], ["media"]>>;
+      "media": Jsonify<OneOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Posting"]["_getByMedia"]>[0], ["media"]>, AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Posting"]["createPost"]>[0], ["media"]>]>>;
     };
     output: {
       "post": Jsonify<AtPath<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Posting"]["createPost"]>>, ["post"]>>;
     };
-    error: { error: HttpAppWideError | "INVALID_REQUEST" | "UNAUTHORIZED" };
+    error: { error: HttpAppWideError | "CONFLICT" | "INVALID_REQUEST" | "UNAUTHORIZED" };
   };
   "/catalog/tag": {
     input: {

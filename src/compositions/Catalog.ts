@@ -16,14 +16,43 @@ const CreateCatalogPost = endpoint(
         }),
       )
       .then(
-        Posting.createPost({
-          user,
-          media,
-          caption,
-        }).responds({ post }),
-      )
-      .then(
-        respond({ post }),
+        where(
+          no(
+            Posting._getByMedia({
+              media,
+            }),
+          ),
+        )
+          .then(
+            Posting.createPost({
+              user,
+              media,
+              caption,
+            }).responds({
+              post,
+            }),
+          )
+          .then(
+            respond({
+              post,
+            }),
+          )
+          .named("media-available"),
+
+        where(
+          Posting._getByMedia({
+            media,
+          }),
+        )
+          .then(
+            respond({
+              error:
+                "MEDIA_ALREADY_CATALOGED",
+            }),
+          )
+          .named(
+            "media-already-cataloged",
+          ),
       ),
 );
 const AttachCatalogTag = endpoint(

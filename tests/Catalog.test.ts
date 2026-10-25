@@ -208,3 +208,61 @@ test("catalog creates a missing tag and attaches it to the post", async () => {
   expect(assignment).not.toBeNull();
 });
 
+test(
+  "catalog rejects media that has already been cataloged",
+  async () => {
+    const first =
+      await app.invoker.invoke(
+        "/catalog/post",
+        {
+          session,
+          media:
+            "https://example.com/duplicate-video",
+          caption: "First catalog",
+        },
+      );
+
+    expect(first.ok).toBe(true);
+
+    const duplicate =
+      await app.invoker.invoke(
+        "/catalog/post",
+        {
+          session,
+          media:
+            "https://example.com/duplicate-video",
+          caption: "Duplicate catalog",
+        },
+      );
+
+    expect(duplicate.ok).toBe(false);
+
+    if (
+      duplicate.ok ||
+      duplicate.error.kind !== "domain"
+    ) {
+      throw new Error(
+        "Expected a domain error",
+      );
+    }
+
+    expect(
+      duplicate.error.value,
+    ).toBe(
+      "MEDIA_ALREADY_CATALOGED",
+    );
+
+    const posts =
+      await testDb.db
+        .collection<
+          Post<string, string>
+        >("posting.posts")
+        .find({
+          media:
+            "https://example.com/duplicate-video",
+        })
+        .toArray();
+
+    expect(posts).toHaveLength(1);
+  },
+);

@@ -14,18 +14,39 @@ export class PostingConcept<User extends string, Item extends string> {
         this.posts = db.collection<Post<User, Item>>("posting.posts"); 
     }
 
-    async createPost({user, media, caption}: {user: User; media: Item; caption: string}): Promise<{post: string}> {
-        const post: Post<User, Item> = {
-            _id: crypto.randomUUID(), 
-            author: user,
-            media: media, 
-            caption: caption
-        }; 
+async createPost({
+  user,
+  media,
+  caption,
+}: {
+  user: User;
+  media: Item;
+  caption: string;
+}): Promise<{ post: string }> {
+  const existingPost =
+    await this.posts.findOne({
+      media,
+    });
 
-        await this.posts.insertOne(post); 
-        return {post: post._id};
-    }
+  if (existingPost) {
+    throw new Error(
+      "A Post with this media already exists.",
+    );
+  }
 
+  const post: Post<User, Item> = {
+    _id: crypto.randomUUID(),
+    author: user,
+    media,
+    caption,
+  };
+
+  await this.posts.insertOne(post);
+
+  return {
+    post: post._id,
+  };
+}
     async deletePost({post}: {post: string}): Promise<{}>
  {
 
@@ -79,6 +100,23 @@ export class PostingConcept<User extends string, Item extends string> {
     media: post.media,
     caption: post.caption,
   }));
+}
+
+async _getByMedia(
+  { media }: { media: Item },
+): Promise<{ post: string }[]> {
+  const found =
+    await this.posts.findOne({
+      media,
+    });
+
+  if (found === null) {
+    return [];
+  }
+
+  return [{
+    post: found._id,
+  }];
 }
 
 

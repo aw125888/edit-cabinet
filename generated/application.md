@@ -70,6 +70,7 @@ Defined in [Posting](../design/concepts/posting.md), line 1.
 
 - `_get(post: Post) : optional (user: User, media: Item, caption: String)`
 - `_postsBy(user: User) : many (post: Post, media: Item, caption: String)`
+- `_getByMedia(media: Item) : optional (post: Post)`
 
 #### Instances
 
@@ -320,7 +321,7 @@ then
   Sessioning.use (session)
 ```
 
-### Catalog.CreateCatalogPost#2
+### Catalog.CreateCatalogPost:media-already-cataloged#2
 
 Authored path: `Catalog.CreateCatalogPost`.
 - Covered by [Catalog](../design/compositions/Catalog.md), line 3.
@@ -330,18 +331,34 @@ Authored path: `Catalog.CreateCatalogPost`.
 when Sessioning.use (session, subject: user), asked by Catalog.CreateCatalogPost
 where
   earlier, RequestBoundary.request (caption, media, path: "/catalog/post", requestId, session)
+  Posting._getByMedia (media)
 then
-  Posting.createPost (caption, media, user)
+  RequestBoundary.respond (error: "MEDIA_ALREADY_CATALOGED", requestId)
 ```
 
-### Catalog.CreateCatalogPost#3
+### Catalog.CreateCatalogPost:media-available#2
 
 Authored path: `Catalog.CreateCatalogPost`.
 - Covered by [Catalog](../design/compositions/Catalog.md), line 3.
 - Covered by [Catalog](../design/compositions/Catalog.md), line 8.
 
 ```reaction
-when Posting.createPost (caption, media, user, post), asked by Catalog.CreateCatalogPost#2
+when Sessioning.use (session, subject: user), asked by Catalog.CreateCatalogPost
+where
+  earlier, RequestBoundary.request (caption, media, path: "/catalog/post", requestId, session)
+  no Posting._getByMedia (media)
+then
+  Posting.createPost (caption, media, user)
+```
+
+### Catalog.CreateCatalogPost:media-available#3
+
+Authored path: `Catalog.CreateCatalogPost`.
+- Covered by [Catalog](../design/compositions/Catalog.md), line 3.
+- Covered by [Catalog](../design/compositions/Catalog.md), line 8.
+
+```reaction
+when Posting.createPost (caption, media, user, post), asked by Catalog.CreateCatalogPost:media-available#2
 where
   earlier, RequestBoundary.request (caption, media, path: "/catalog/post", requestId, session)
 then

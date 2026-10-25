@@ -22,6 +22,7 @@ export function editCabinetApiPolicy(): HttpPolicy {
 
       FOLDER_NAME_TAKEN: "CONFLICT",
       ALREADY_IN_FOLDER: "CONFLICT",
+      MEDIA_ALREADY_CATALOGED: "CONFLICT",
     },
 
     cookies: {

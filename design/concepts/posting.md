@@ -19,12 +19,15 @@ a set of Posts with
   an author User
   a media Item
   a caption String
+
+Rule: each media identifies at most one Post
 ```
 
 ## Actions 
 ```actions
+
 createPost(user: User, media: Item, caption: String): returns (post: Post)
-  where true
+  where no Post with given media exists
   then
     create a new Post with author set to user,
     media set to given media,
@@ -54,4 +57,8 @@ _get(post: Post) : optional (user: User, media: Item, caption: String)
 
 _postsBy(user: User) : many (post: Post, media: Item, caption: String)
   Returns all Posts cataloged by the user.
+
+_getByMedia(media: Item): optional (post: Post)
+  answers the Post with the given media if it exists
+  answers no row if no Post has the given media
 ```

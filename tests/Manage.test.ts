@@ -93,10 +93,11 @@ afterAll(async () => {
 async function createPost(
   session: string,
   caption: string,
+  media = `https://example.com/${crypto.randomUUID()}.mp4`,
 ) {
   const result = await app.invoker.invoke("/catalog/post", {
     session,
-    media: "https://example.com/video.mp4",
+    media,
     caption,
   });
 
@@ -156,18 +157,16 @@ test("manage returns only the signed-in user's posts", async () => {
 
 expect(value.posts).toEqual(
   expect.arrayContaining([
-    {
+    expect.objectContaining({
       post: amberPost1,
-      media: "https://example.com/video.mp4",
       caption: "Amber edit one",
       tags: [],
-    },
-    {
+    }),
+    expect.objectContaining({
       post: amberPost2,
-      media: "https://example.com/video.mp4",
       caption: "Amber edit two",
       tags: [],
-    },
+    }),
   ]),
 );
 
