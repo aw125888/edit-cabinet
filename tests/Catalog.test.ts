@@ -266,3 +266,43 @@ test(
     expect(posts).toHaveLength(1);
   },
 );
+
+test("catalog returns the total number of cataloged edits", async () => {
+  await app.invoker.invoke(
+    "/catalog/post",
+    {
+      session,
+      media: "video-count-1",
+      caption: "First",
+    },
+  );
+
+  await app.invoker.invoke(
+    "/catalog/post",
+    {
+      session,
+      media: "video-count-2",
+      caption: "Second",
+    },
+  );
+
+  const result =
+  await app.invoker.invoke(
+    "/catalog/count",
+    {},
+  );
+  expect(result.ok).toBe(true);
+
+  if (
+    !result.ok ||
+    typeof result.value !== "object" ||
+    result.value === null ||
+    !("count" in result.value)
+  ) {
+    throw new Error(
+      "Expected Catalog to return a count",
+    );
+  }
+
+  expect(result.value.count).toBe(2);
+});

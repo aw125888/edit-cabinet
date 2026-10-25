@@ -216,3 +216,24 @@ test("_getByMedia returns no row for nonexistent media", async () => {
 
   expect(results).toEqual([]);
 });
+
+test("_count returns the total number of cataloged posts", async () => {
+  await posting.createPost({
+    user: "amber",
+    media: "video-1",
+    caption: "First",
+  });
+
+  await posting.createPost({
+    user: "bob",
+    media: "video-2",
+    caption: "Second",
+  });
+
+  const result =
+    await posting._count();
+    expect(result).toEqual(
+  { count: 2 },
+);
+
+});

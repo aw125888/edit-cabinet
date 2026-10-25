@@ -71,6 +71,7 @@ Defined in [Posting](../design/concepts/posting.md), line 1.
 - `_get(post: Post) : optional (user: User, media: Item, caption: String)`
 - `_postsBy(user: User) : many (post: Post, media: Item, caption: String)`
 - `_getByMedia(media: Item) : optional (post: Post)`
+- `_count() : one (count: Number)`
 
 #### Instances
 
@@ -243,7 +244,7 @@ Former "the search result for post (post)" — inputs (post); bindings (user, us
 
 Authored path: `Catalog.AttachCatalogTag`.
 - Covered by [Catalog](../design/compositions/Catalog.md), line 5.
-- Covered by [Catalog](../design/compositions/Catalog.md), line 9.
+- Covered by [Catalog](../design/compositions/Catalog.md), line 11.
 
 ```reaction
 when RequestBoundary.request (category, name, path: "/catalog/tag", post, requestId)
@@ -257,7 +258,7 @@ then
 
 Authored path: `Catalog.AttachCatalogTag`.
 - Covered by [Catalog](../design/compositions/Catalog.md), line 5.
-- Covered by [Catalog](../design/compositions/Catalog.md), line 9.
+- Covered by [Catalog](../design/compositions/Catalog.md), line 11.
 
 ```reaction
 when Tagging.tagItem (item: post, tag, assignment), asked by Catalog.AttachCatalogTag:tag-exists
@@ -271,7 +272,7 @@ then
 
 Authored path: `Catalog.AttachCatalogTag`.
 - Covered by [Catalog](../design/compositions/Catalog.md), line 5.
-- Covered by [Catalog](../design/compositions/Catalog.md), line 9.
+- Covered by [Catalog](../design/compositions/Catalog.md), line 11.
 
 ```reaction
 when RequestBoundary.request (category, name, path: "/catalog/tag", post, requestId)
@@ -285,7 +286,7 @@ then
 
 Authored path: `Catalog.AttachCatalogTag`.
 - Covered by [Catalog](../design/compositions/Catalog.md), line 5.
-- Covered by [Catalog](../design/compositions/Catalog.md), line 9.
+- Covered by [Catalog](../design/compositions/Catalog.md), line 11.
 
 ```reaction
 when Tagging.createTag (category, name, tag: newTag), asked by Catalog.AttachCatalogTag:tag-missing
@@ -299,7 +300,7 @@ then
 
 Authored path: `Catalog.AttachCatalogTag`.
 - Covered by [Catalog](../design/compositions/Catalog.md), line 5.
-- Covered by [Catalog](../design/compositions/Catalog.md), line 9.
+- Covered by [Catalog](../design/compositions/Catalog.md), line 11.
 
 ```reaction
 when Tagging.tagItem (item: post, tag: newTag, assignment), asked by Catalog.AttachCatalogTag:tag-missing#2
@@ -313,7 +314,7 @@ then
 
 Authored path: `Catalog.CreateCatalogPost`.
 - Covered by [Catalog](../design/compositions/Catalog.md), line 3.
-- Covered by [Catalog](../design/compositions/Catalog.md), line 8.
+- Covered by [Catalog](../design/compositions/Catalog.md), line 10.
 
 ```reaction
 when RequestBoundary.request (caption, media, path: "/catalog/post", requestId, session)
@@ -325,7 +326,7 @@ then
 
 Authored path: `Catalog.CreateCatalogPost`.
 - Covered by [Catalog](../design/compositions/Catalog.md), line 3.
-- Covered by [Catalog](../design/compositions/Catalog.md), line 8.
+- Covered by [Catalog](../design/compositions/Catalog.md), line 10.
 
 ```reaction
 when Sessioning.use (session, subject: user), asked by Catalog.CreateCatalogPost
@@ -340,7 +341,7 @@ then
 
 Authored path: `Catalog.CreateCatalogPost`.
 - Covered by [Catalog](../design/compositions/Catalog.md), line 3.
-- Covered by [Catalog](../design/compositions/Catalog.md), line 8.
+- Covered by [Catalog](../design/compositions/Catalog.md), line 10.
 
 ```reaction
 when Sessioning.use (session, subject: user), asked by Catalog.CreateCatalogPost
@@ -355,7 +356,7 @@ then
 
 Authored path: `Catalog.CreateCatalogPost`.
 - Covered by [Catalog](../design/compositions/Catalog.md), line 3.
-- Covered by [Catalog](../design/compositions/Catalog.md), line 8.
+- Covered by [Catalog](../design/compositions/Catalog.md), line 10.
 
 ```reaction
 when Posting.createPost (caption, media, user, post), asked by Catalog.CreateCatalogPost:media-available#2
@@ -363,6 +364,20 @@ where
   earlier, RequestBoundary.request (caption, media, path: "/catalog/post", requestId, session)
 then
   RequestBoundary.respond (post, requestId)
+```
+
+### Catalog.GetCatalogCount
+
+Authored path: `Catalog.GetCatalogCount`.
+- Covered by [Catalog](../design/compositions/Catalog.md), line 7.
+- Covered by [Catalog](../design/compositions/Catalog.md), line 12.
+
+```reaction
+when RequestBoundary.request (path: "/catalog/count", requestId)
+where
+  Posting._count () has (count)
+then
+  RequestBoundary.respond (count, requestId)
 ```
 
 ### DeliverFaultToAsker

@@ -118,8 +118,14 @@ async _getByMedia(
     post: found._id,
   }];
 }
+async _count(): Promise<{
+  count: number;
+}> {
+  const count =
+    await this.posts.countDocuments();
 
-
+  return { count };
+}
 
 }
 

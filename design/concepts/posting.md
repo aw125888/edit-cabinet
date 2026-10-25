@@ -61,4 +61,7 @@ _postsBy(user: User) : many (post: Post, media: Item, caption: String)
 _getByMedia(media: Item): optional (post: Post)
   answers the Post with the given media if it exists
   answers no row if no Post has the given media
+
+_count() : one (count: Number)
+  answers the total number of Posts
 ```

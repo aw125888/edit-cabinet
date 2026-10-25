@@ -1,4 +1,11 @@
 <script setup lang="ts">
+import {
+  onMounted,
+  ref,
+} from "vue";
+
+import { api } from "../api";
+
 import FilmStream from "../components/FilmStream.vue";
 import RightFilmStream from "../components/RightFilmStream.vue";
 
@@ -6,17 +13,63 @@ defineEmits<{
   catalog: [];
   search: [];
 }>();
+
+const catalogCount =
+  ref<number | null>(null);
+async function loadCatalogCount() {
+  try {
+    const result =
+      await api.catalog.count({});
+
+    console.log(
+      "CATALOG COUNT RESULT:",
+      result,
+    );
+
+    if ("error" in result) {
+      console.error(
+        "Catalog count error:",
+        result.error,
+      );
+      return;
+    }
+
+    catalogCount.value =
+      result.count;
+  } catch (error) {
+    console.error(
+      "Could not load catalog count:",
+      error,
+    );
+  }
+}
+onMounted(() => {
+  void loadCatalogCount();
+});
 </script>
 
 <template>
   <FilmStream />
-  <RightFilmStream/>
+  <RightFilmStream />
 
   <main class="home-page">
     <section class="home-panel">
       <h1 class="home-logo">
         Edit Cabinet
       </h1>
+
+      <p
+        v-if="catalogCount !== null"
+        class="archive-count"
+      >
+        {{ catalogCount }}
+        {{
+          catalogCount === 1
+            ? "edit"
+            : "edits"
+        }}
+        cataloged and counting!
+      </p>
 
       <div class="home-actions">
         <button
@@ -54,7 +107,7 @@ defineEmits<{
 }
 
 .home-logo {
-  margin: 0 0 1.25rem;
+  margin: 0 0 0.45rem;
 
   font-family: "Montella", serif;
   font-size: 3.75rem;
@@ -66,6 +119,13 @@ defineEmits<{
 
 .home-logo:hover {
   color: pink;
+}
+
+.archive-count {
+  margin: 0 0 1.25rem;
+
+  color: #777;
+  font-size: 0.8rem;
 }
 
 .home-actions {

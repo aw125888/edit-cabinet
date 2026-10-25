@@ -54,6 +54,13 @@ export type ApplicationWire = {
     };
     error: { error: AppWideError | "INVALID_INPUT" | "INVALID_PASSWORD" | "INVALID_USERNAME" | "PASSWORD_SET" | "USERNAME_TAKEN" };
   };
+  "/catalog/count": {
+    input: Record<string, never>;
+    output: {
+      "count": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Posting"]["_count"]>>>, ["count"]>>;
+    };
+    error: { error: AppWideError };
+  };
   "/catalog/post": {
     input: {
       "caption": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Posting"]["createPost"]>[0], ["caption"]>>;
@@ -292,6 +299,13 @@ export type ApplicationWireHttp = {
       "user": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Sessioning"]["start"]>[0], ["subject"]>>;
     };
     error: { error: HttpAppWideError | "CONFLICT" | "INVALID_REQUEST" };
+  };
+  "/catalog/count": {
+    input: Record<string, never>;
+    output: {
+      "count": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Posting"]["_count"]>>>, ["count"]>>;
+    };
+    error: { error: HttpAppWideError };
   };
   "/catalog/post": {
     input: {

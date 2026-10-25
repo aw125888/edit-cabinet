@@ -55,6 +55,25 @@ const CreateCatalogPost = endpoint(
           ),
       ),
 );
+
+const GetCatalogCount = endpoint(
+  "/catalog/count",
+  ({ count }) =>
+    receive({})
+      .then(
+        where(
+          Posting._count({}).is({
+            count,
+          }),
+        )
+          .then(
+            respond({
+              count,
+            }),
+          )
+          .named("count"),
+      ),
+);
 const AttachCatalogTag = endpoint(
   "/catalog/tag",
   ({
@@ -98,5 +117,5 @@ const AttachCatalogTag = endpoint(
 );
 
 export const catalogComposition = {
-    Catalog: {CreateCatalogPost, AttachCatalogTag}, 
+    Catalog: {CreateCatalogPost, GetCatalogCount, AttachCatalogTag}, 
 }
