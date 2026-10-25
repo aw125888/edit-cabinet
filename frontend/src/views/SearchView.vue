@@ -150,6 +150,53 @@ async function loadFolders() {
   folders.value = result.result.folders;
 }
 
+
+async function loadAddedFolders(
+  post: string,
+) {
+  const next =
+    new Set(addedFolders.value);
+
+  for (const folder of folders.value) {
+    const result =
+      await api.slot.folder({
+        folder: folder.folder,
+      });
+
+    if ("error" in result) {
+      continue;
+    }
+
+    const alreadyContainsPost =
+      result.result.items.some(
+        (item) =>
+          item.post === post,
+      );
+
+    if (alreadyContainsPost) {
+      next.add(
+        slotKey(
+          post,
+          folder.folder,
+        ),
+      );
+    }
+  }
+
+  addedFolders.value = next;
+}
+
+function availableFolders(
+  post: string,
+) {
+  return folders.value.filter(
+    (folder) =>
+      !isAdded(
+        post,
+        folder.folder,
+      ),
+  );
+}
 /*
  * Each result's Slot panel can open and close
  * independently.
@@ -171,10 +218,10 @@ async function toggleSlot(
 
   slotMessages.value[post] = "";
 
-  try {
-    await loadFolders();
-  } catch (error) {
-    console.error(error);
+try {
+  await loadFolders();
+  await loadAddedFolders(post);
+} catch (error) {
 
     if (error instanceof Error) {
       slotMessages.value[post] =
@@ -699,53 +746,46 @@ async function search() {
                 </p>
 
                 <p
-                  v-if="
-                    folders.length === 0
-                  "
-                  class="no-folders"
-                >
-                  No available folders.
-                </p>
+  v-if="
+    availableFolders(
+      result.post
+    ).length === 0
+  "
+  class="no-folders"
+>
+  No available folders.
+</p>
 
-                <ul
-                  v-else
-                  class="folder-list"
-                >
-                  <li
-                    v-for="folder in folders"
-                    :key="folder.folder"
-                  >
-                    <span>
-                      {{ folder.name }}
-                    </span>
+<ul
+  v-else
+  class="folder-list"
+>
+  <li
+    v-for="
+      folder in availableFolders(
+        result.post
+      )
+    "
+    :key="folder.folder"
+  >
+    <span>
+      {{ folder.name }}
+    </span>
 
-                    <button
-                      class="text-action"
-                      type="button"
-                      :disabled="
-                        isAdded(
-                          result.post,
-                          folder.folder
-                        )
-                      "
-                      @click="
-                        addPostToFolder(
-                          result.post,
-                          folder.folder
-                        )
-                      "
-                    >
-                      {{
-                        isAdded(
-                          result.post,
-                          folder.folder
-                        )
-                          ? "Added"
-                          : "Add here"
-                      }}
-                    </button>
-                  </li>
-                </ul>
+    <button
+      class="text-action"
+      type="button"
+      @click="
+        addPostToFolder(
+          result.post,
+          folder.folder
+        )
+      "
+    >
+      Add here
+    </button>
+  </li>
+</ul>
 
                 <p class="slot-heading create-heading">
                   Create New Folder:
