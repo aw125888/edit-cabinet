@@ -12,13 +12,12 @@ EDIT CABINET is a detailed archive for edits that preserves their context and le
 
 ## P2: Alpha (MVP)
 
-- [User Journey](user-journey.md)
 - [Design Notes](design-notes.md)
-- [MVP Demo](MVPDemo.MOV)
+- [MVP Demo](https://youtu.be/_iWghbLknUA?si=-uJUe402u_etcyhh)
 
 ## P3: Beta
 
-- [Updated User Journey](user-journey.md)
+- [User Journey](user-journey.md)
 - [Visual Design Study Slides](P3%20Visual%20Inspo%20.pdf)
 - [Visual Design Study Annotations](p3visualdesign.md)
 - [P3 Screen Recording](https://youtu.be/5a6uJyhUMGA?si=w5SzxXwwb7_l36fX)
@@ -27,7 +26,6 @@ EDIT CABINET is a detailed archive for edits that preserves their context and le
 
 - [Final Design Document](fullDesignNotebook.md)
 - [Final Screen Recording](https://youtu.be/WlRAZfW2a8I?si=xjF-Mu9TVeXtB3QR)
-- [Saved Test Execution Output](test-output.txt)
 
 ## Local Setup
 
