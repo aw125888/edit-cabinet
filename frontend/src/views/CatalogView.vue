@@ -159,7 +159,7 @@ function friendlyError(
       return "That request could not be completed.";
 
     case "CONFLICT":
-      return "That edit could not be cataloged because it conflicts with existing data.";
+      return "That edit has already been cataloged.";
 
     default:
       return "Something went wrong. Please try again.";
