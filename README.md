@@ -57,7 +57,11 @@ Make sure MongoDB is running and `MONGODB_URL` is set, then run:
 
 ```bash
 bun run start
+
+
 ```
+
+Local authentication note: When running locally, authentication through the 127.0.0.1 URL currently works only in Google Chrome.
 
 ### Test
 
