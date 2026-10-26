@@ -95,7 +95,7 @@ function showPermanentMessage(
 
 function showTemporaryMessage(
   text: string,
-  type: "success" | "delete",
+  type: "success" | "delete" | "error",
 ) {
   clearMessageTimers();
 
@@ -126,7 +126,7 @@ function friendlyError(error: string) {
 
     case "INVALID_REQUEST":
       return "That request could not be completed.";
-    
+
     case "CONFLICT":
       return "This video has already been cataloged.";
 
@@ -203,12 +203,12 @@ async function createFolder() {
 
     if ("error" in result) {
       if (result.error === "CONFLICT") {
-        showPermanentMessage(
+        showTemporaryMessage(
           "You already have a folder with that name.",
           "error",
         );
       } else {
-        showPermanentMessage(
+        showTemporaryMessage(
           friendlyError(result.error),
           "error",
         );
@@ -228,7 +228,7 @@ async function createFolder() {
   } catch (error) {
     console.error(error);
 
-    showPermanentMessage(
+    showTemporaryMessage(
       "Could not connect to the backend.",
       "error",
     );
@@ -303,7 +303,7 @@ async function removePost(
     });
 
   if ("error" in result) {
-    showPermanentMessage(
+    showTemporaryMessage(
       friendlyError(result.error),
       "error",
     );
@@ -358,12 +358,12 @@ async function renameFolder(
 
   if ("error" in result) {
     if (result.error === "CONFLICT") {
-      showPermanentMessage(
+      showTemporaryMessage(
         "You already have a folder with that name.",
         "error",
       );
     } else {
-      showPermanentMessage(
+      showTemporaryMessage(
         friendlyError(result.error),
         "error",
       );
@@ -396,7 +396,7 @@ async function deleteFolder(
     });
 
   if ("error" in result) {
-    showPermanentMessage(
+    showTemporaryMessage(
       friendlyError(result.error),
       "error",
     );
@@ -448,7 +448,6 @@ onBeforeUnmount(() => {
     <template
       v-if="selectedFolder === null"
     >
-      <!-- DECORATIVE IMAGE -->
       <img
         class="folder-image"
         :src="folderImage"
@@ -461,10 +460,6 @@ onBeforeUnmount(() => {
           Slotted By Me:
         </h1>
 
-        <!--
-          Reserved space means reactions can
-          appear/fade without moving the content.
-        -->
         <div class="status-area">
           <p
             v-if="loading"
@@ -765,10 +760,6 @@ onBeforeUnmount(() => {
   margin: 0 auto;
 }
 
-/*
- * Decorative folder image on the left,
- * vertically centered in the viewport.
- */
 .folder-image {
   position: fixed;
 
@@ -806,11 +797,6 @@ onBeforeUnmount(() => {
    STATUS
    ============================== */
 
-/*
- * Permanent reserved space.
- * Messages can fade without shifting
- * the folder panel up or down.
- */
 .status-area {
   height: 2.5rem;
 
@@ -981,9 +967,8 @@ onBeforeUnmount(() => {
 }
 
 .green-action {
-  color:green;
+  color: green;
 }
-
 
 .plain-action {
   color: #181818;
@@ -1002,7 +987,11 @@ onBeforeUnmount(() => {
   text-decoration: underline;
 }
 
-.red-action:disabled {
+.red-action:disabled,
+.green-action:disabled,
+.blue-action:disabled,
+.purple-action:disabled,
+.plain-action:disabled {
   opacity: 0.4;
 
   cursor: default;

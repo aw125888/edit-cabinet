@@ -1,5 +1,10 @@
 <script setup lang="ts">
-import { computed, ref } from "vue";
+import {
+  computed,
+  onBeforeUnmount,
+  ref,
+} from "vue";
+
 import { api } from "../api";
 
 defineEmits<{
@@ -45,32 +50,54 @@ interface Folder {
 
 const folders = ref<Folder[]>([]);
 const openSlots = ref<Set<string>>(new Set());
-const newFolderNames = ref<Record<string, string>>({});
-const slotMessages = ref<Record<string, string>>({});
-const addedFolders = ref<Set<string>>(new Set());
 
-const selectedTags = ref<SearchTag[]>([]);
+const newFolderNames =
+  ref<Record<string, string>>({});
 
-const tagInputs = ref<Record<Category, string>>({
-  "Aesthetic/Concept": "",
-  "Media": "",
-  "Characters": "",
-  "Musical Artist": "",
-  "Song": "",
-  "Public Figure": "",
-  "Things": "",
-});
+const slotMessages =
+  ref<Record<string, string>>({});
 
-const results = ref<SearchResult[]>([]);
+const addedFolders =
+  ref<Set<string>>(new Set());
+
+const selectedTags =
+  ref<SearchTag[]>([]);
+
+const tagInputs =
+  ref<Record<Category, string>>({
+    "Aesthetic/Concept": "",
+    "Media": "",
+    "Characters": "",
+    "Musical Artist": "",
+    "Song": "",
+    "Public Figure": "",
+    "Things": "",
+  });
+
+const results =
+  ref<SearchResult[]>([]);
+
 const message = ref("");
 const searching = ref(false);
 const hasSearched = ref(false);
+
+const slotMessageTimers =
+  new Map<
+    string,
+    ReturnType<typeof setTimeout>
+  >();
 
 const canSearch = computed(() => {
   return selectedTags.value.length >= 1;
 });
 
-function categoryLabel(category: Category) {
+/* ==============================
+   LABELS
+   ============================== */
+
+function categoryLabel(
+  category: Category,
+) {
   switch (category) {
     case "Aesthetic/Concept":
       return "Aesthetic";
@@ -86,7 +113,9 @@ function categoryLabel(category: Category) {
   }
 }
 
-function resultCategoryLabel(category: string) {
+function resultCategoryLabel(
+  category: string,
+) {
   switch (category) {
     case "Aesthetic/Concept":
       return "Aesthetic";
@@ -102,11 +131,13 @@ function resultCategoryLabel(category: string) {
   }
 }
 
-/*
- * Generic errors used when the operation itself
- * does not give us a more specific CONFLICT meaning.
- */
-function friendlyError(error: string) {
+/* ==============================
+   ERRORS
+   ============================== */
+
+function friendlyError(
+  error: string,
+) {
   switch (error) {
     case "FORBIDDEN":
       return "You don't have permission to do that.";
@@ -121,6 +152,58 @@ function friendlyError(error: string) {
       return "Something went wrong. Please try again.";
   }
 }
+
+/* ==============================
+   SLOT MESSAGES
+   ============================== */
+
+function clearSlotMessage(
+  post: string,
+) {
+  const timer =
+    slotMessageTimers.get(post);
+
+  if (timer !== undefined) {
+    clearTimeout(timer);
+    slotMessageTimers.delete(post);
+  }
+
+  slotMessages.value[post] = "";
+}
+
+function showSlotMessage(
+  post: string,
+  text: string,
+) {
+  clearSlotMessage(post);
+
+  slotMessages.value[post] = text;
+
+  const timer = setTimeout(() => {
+    slotMessages.value[post] = "";
+    slotMessageTimers.delete(post);
+  }, 2500);
+
+  slotMessageTimers.set(
+    post,
+    timer,
+  );
+}
+
+function clearAllSlotMessageTimers() {
+  for (
+    const timer
+    of slotMessageTimers.values()
+  ) {
+    clearTimeout(timer);
+  }
+
+  slotMessageTimers.clear();
+}
+
+/* ==============================
+   SLOT HELPERS
+   ============================== */
 
 function slotKey(
   post: string,
@@ -139,7 +222,8 @@ function isAdded(
 }
 
 async function loadFolders() {
-  const result = await api.slot.folders({});
+  const result =
+    await api.slot.folders({});
 
   if ("error" in result) {
     throw new Error(
@@ -147,7 +231,8 @@ async function loadFolders() {
     );
   }
 
-  folders.value = result.result.folders;
+  folders.value =
+    result.result.folders;
 }
 
 async function loadAddedFolders(
@@ -156,7 +241,10 @@ async function loadAddedFolders(
   const next =
     new Set(addedFolders.value);
 
-  for (const folder of folders.value) {
+  for (
+    const folder
+    of folders.value
+  ) {
     const result =
       await api.slot.folder({
         folder: folder.folder,
@@ -197,10 +285,10 @@ function availableFolders(
   );
 }
 
-/*
- * Each result's Slot panel can open and close
- * independently.
- */
+/* ==============================
+   SLOT PANEL
+   ============================== */
+
 async function toggleSlot(
   post: string,
 ) {
@@ -210,43 +298,53 @@ async function toggleSlot(
   if (next.has(post)) {
     next.delete(post);
     openSlots.value = next;
+
+    clearSlotMessage(post);
+
     return;
   }
 
   next.add(post);
   openSlots.value = next;
 
-  slotMessages.value[post] = "";
+  clearSlotMessage(post);
 
   try {
     await loadFolders();
     await loadAddedFolders(post);
   } catch (error) {
     if (error instanceof Error) {
-      slotMessages.value[post] =
-        error.message;
+      showSlotMessage(
+        post,
+        error.message,
+      );
     } else {
-      slotMessages.value[post] =
-        "Something went wrong. Please try again.";
+      showSlotMessage(
+        post,
+        "Something went wrong. Please try again.",
+      );
     }
   }
 }
 
-/*
- * For this endpoint, CONFLICT specifically means
- * that this user already has a folder with the
- * requested name.
- */
+/* ==============================
+   CREATE FOLDER
+   ============================== */
+
 async function createFolder(
   post: string,
 ) {
   const name = (
-    newFolderNames.value[post] ?? ""
+    newFolderNames.value[
+      post
+    ] ?? ""
   ).trim();
 
   if (!name) {
     return;
   }
+
+  clearSlotMessage(post);
 
   const result =
     await api.slot.folder.create({
@@ -254,44 +352,56 @@ async function createFolder(
     });
 
   if ("error" in result) {
-    if (result.error === "CONFLICT") {
-      slotMessages.value[post] =
+    let text =
+      "Something went wrong. Please try again.";
+
+    if (
+      result.error === "CONFLICT"
+    ) {
+      text =
         "You already have a folder with that name.";
     } else if (
-      result.error === "UNAUTHORIZED"
+      result.error ===
+      "UNAUTHORIZED"
     ) {
-      slotMessages.value[post] =
+      text =
         "Please sign in again.";
     } else if (
-      result.error === "INVALID_REQUEST"
+      result.error ===
+      "INVALID_REQUEST"
     ) {
-      slotMessages.value[post] =
+      text =
         "That folder could not be created.";
-    } else {
-      slotMessages.value[post] =
-        "Something went wrong. Please try again.";
     }
+
+    showSlotMessage(
+      post,
+      text,
+    );
 
     return;
   }
 
   newFolderNames.value[post] = "";
-  slotMessages.value[post] = "";
+
+  clearSlotMessage(post);
 
   try {
     await loadFolders();
   } catch (error) {
     console.error(error);
 
-    slotMessages.value[post] =
-      "Folder was created, but the folder list could not be refreshed.";
+    showSlotMessage(
+      post,
+      "Folder was created, but the folder list could not be refreshed.",
+    );
   }
 }
 
-/*
- * For this endpoint, CONFLICT specifically means
- * that this Post is already in this folder.
- */
+/* ==============================
+   ADD TO FOLDER
+   ============================== */
+
 async function addPostToFolder(
   post: string,
   folder: string,
@@ -300,6 +410,8 @@ async function addPostToFolder(
     return;
   }
 
+  clearSlotMessage(post);
+
   const result =
     await api.slot.add({
       folder,
@@ -307,28 +419,37 @@ async function addPostToFolder(
     });
 
   if ("error" in result) {
-    if (result.error === "CONFLICT") {
-      slotMessages.value[post] =
+    let text =
+      "Something went wrong. Please try again.";
+
+    if (
+      result.error === "CONFLICT"
+    ) {
+      text =
         "This edit is already in that folder.";
     } else if (
       result.error === "FORBIDDEN"
     ) {
-      slotMessages.value[post] =
+      text =
         "You don't have permission to add to that folder.";
     } else if (
-      result.error === "UNAUTHORIZED"
+      result.error ===
+      "UNAUTHORIZED"
     ) {
-      slotMessages.value[post] =
+      text =
         "Please sign in again.";
     } else if (
-      result.error === "INVALID_REQUEST"
+      result.error ===
+      "INVALID_REQUEST"
     ) {
-      slotMessages.value[post] =
+      text =
         "This edit could not be added to that folder.";
-    } else {
-      slotMessages.value[post] =
-        "Something went wrong. Please try again.";
     }
+
+    showSlotMessage(
+      post,
+      text,
+    );
 
     return;
   }
@@ -337,12 +458,20 @@ async function addPostToFolder(
     new Set(addedFolders.value);
 
   next.add(
-    slotKey(post, folder),
+    slotKey(
+      post,
+      folder,
+    ),
   );
 
   addedFolders.value = next;
-  slotMessages.value[post] = "";
+
+  clearSlotMessage(post);
 }
+
+/* ==============================
+   SEARCH TAGS
+   ============================== */
 
 function tagsFor(
   category: Category,
@@ -368,7 +497,8 @@ function addTag(
   const duplicate =
     selectedTags.value.some(
       (tag) =>
-        tag.category === category &&
+        tag.category ===
+          category &&
         tag.name.toLowerCase() ===
           name.toLowerCase(),
     );
@@ -385,7 +515,10 @@ function addTag(
     category,
   });
 
-  tagInputs.value[category] = "";
+  tagInputs.value[
+    category
+  ] = "";
+
   message.value = "";
 }
 
@@ -399,6 +532,10 @@ function removeTag(
     );
 }
 
+/* ==============================
+   SEARCH
+   ============================== */
+
 async function search() {
   if (!canSearch.value) {
     return;
@@ -410,8 +547,13 @@ async function search() {
   results.value = [];
   message.value = "";
 
-  openSlots.value = new Set();
-  addedFolders.value = new Set();
+  openSlots.value =
+    new Set();
+
+  addedFolders.value =
+    new Set();
+
+  clearAllSlotMessageTimers();
 
   slotMessages.value = {};
   newFolderNames.value = {};
@@ -427,10 +569,13 @@ async function search() {
       const tagResult =
         await api.search.tag({
           name: tag.name,
-          category: tag.category,
+          category:
+            tag.category,
         });
 
-      if ("error" in tagResult) {
+      if (
+        "error" in tagResult
+      ) {
         console.error(
           "Search tag error:",
           tagResult.error,
@@ -443,7 +588,8 @@ async function search() {
 
       for (
         const item
-        of tagResult.results.items
+        of tagResult.results
+          .items
       ) {
         const oldCount =
           matchCounts.get(
@@ -461,7 +607,10 @@ async function search() {
       SearchResult[] = [];
 
     for (
-      const [post, matches]
+      const [
+        post,
+        matches,
+      ]
       of matchCounts
     ) {
       const postResult =
@@ -469,7 +618,9 @@ async function search() {
           post,
         });
 
-      if ("error" in postResult) {
+      if (
+        "error" in postResult
+      ) {
         console.error(
           "Search post error:",
           postResult.error,
@@ -499,7 +650,9 @@ async function search() {
   } catch (error) {
     console.error(error);
 
-    if (error instanceof Error) {
+    if (
+      error instanceof Error
+    ) {
       message.value =
         error.message;
     } else {
@@ -510,6 +663,10 @@ async function search() {
     searching.value = false;
   }
 }
+
+onBeforeUnmount(() => {
+  clearAllSlotMessageTimers();
+});
 </script>
 
 <template>
@@ -535,28 +692,48 @@ async function search() {
 
         <div class="tag-categories">
           <section
-            v-for="category in categories"
+            v-for="
+              category in categories
+            "
             :key="category"
             class="tag-category"
           >
             <div class="tag-row">
               <h3 class="category-title">
-                {{ categoryLabel(category) }}:
+                {{
+                  categoryLabel(
+                    category
+                  )
+                }}:
               </h3>
 
               <div class="tag-entry">
                 <input
-                  v-model="tagInputs[category]"
+                  v-model="
+                    tagInputs[
+                      category
+                    ]
+                  "
                   type="text"
                   maxlength="50"
-                  :placeholder="`Search ${categoryLabel(category)} tag`"
-                  @keyup.enter="addTag(category)"
+                  :placeholder="
+                    `Search ${categoryLabel(category)} tag`
+                  "
+                  @keyup.enter="
+                    addTag(
+                      category
+                    )
+                  "
                 />
 
                 <button
                   class="add-tag"
                   type="button"
-                  @click="addTag(category)"
+                  @click="
+                    addTag(
+                      category
+                    )
+                  "
                 >
                   Add
                 </button>
@@ -564,12 +741,22 @@ async function search() {
             </div>
 
             <ul
-              v-if="tagsFor(category).length > 0"
+              v-if="
+                tagsFor(
+                  category
+                ).length > 0
+              "
               class="selected-tags"
             >
               <li
-                v-for="tag in tagsFor(category)"
-                :key="`${tag.category}-${tag.name}`"
+                v-for="
+                  tag in tagsFor(
+                    category
+                  )
+                "
+                :key="
+                  `${tag.category}-${tag.name}`
+                "
               >
                 {{ tag.name }}
 
@@ -577,7 +764,9 @@ async function search() {
                   class="remove-tag"
                   type="button"
                   aria-label="Remove tag"
-                  @click="removeTag(tag)"
+                  @click="
+                    removeTag(tag)
+                  "
                 >
                   ×
                 </button>
@@ -625,7 +814,9 @@ async function search() {
         </h2>
 
         <p
-          v-if="results.length === 0"
+          v-if="
+            results.length === 0
+          "
           class="no-results"
         >
           No matching edits found.
@@ -636,7 +827,9 @@ async function search() {
           class="results-grid"
         >
           <div
-            v-for="result in results"
+            v-for="
+              result in results
+            "
             :key="result.post"
             class="result-wrapper"
           >
@@ -644,22 +837,29 @@ async function search() {
               {{ result.matches }}
               matching
               {{
-                result.matches === 1
+                result.matches ===
+                1
                   ? "tag"
                   : "tags"
               }}
             </p>
 
-            <article class="result-card">
+            <article
+              class="result-card"
+            >
               <!-- VIDEO -->
               <p class="result-line">
-                <span class="result-label">
+                <span
+                  class="result-label"
+                >
                   Video:
                 </span>
 
                 <a
                   class="video-link"
-                  :href="result.media"
+                  :href="
+                    result.media
+                  "
                   target="_blank"
                   rel="noopener noreferrer"
                 >
@@ -669,11 +869,15 @@ async function search() {
 
               <!-- CAPTION -->
               <p class="result-line">
-                <span class="result-label">
+                <span
+                  class="result-label"
+                >
                   Caption:
                 </span>
 
-                <span class="result-content result-caption">
+                <span
+                  class="result-content result-caption"
+                >
                   {{
                     result.caption ||
                     "Untitled edit"
@@ -683,32 +887,52 @@ async function search() {
 
               <!-- CATALOGER -->
               <p class="result-line">
-                <span class="result-label">
+                <span
+                  class="result-label"
+                >
                   Cataloged By:
                 </span>
 
-                <span class="result-content">
+                <span
+                  class="result-content"
+                >
                   @{{ result.username }}
                 </span>
               </p>
 
               <!-- TAGS -->
-              <div class="result-tag-section">
-                <p class="result-label">
+              <div
+                class="result-tag-section"
+              >
+                <p
+                  class="result-label"
+                >
                   Tags:
                 </p>
 
-                <ul class="result-tags">
+                <ul
+                  class="result-tags"
+                >
                   <li
-                    v-for="tag in result.tags"
+                    v-for="
+                      tag in result.tags
+                    "
                     :key="tag.tag"
                   >
-                    <span class="tag-name">
+                    <span
+                      class="tag-name"
+                    >
                       {{ tag.name }}
                     </span>
 
-                    <span class="tag-category-label">
-                      [{{ resultCategoryLabel(tag.category) }}]
+                    <span
+                      class="tag-category-label"
+                    >
+                      [{{
+                        resultCategoryLabel(
+                          tag.category
+                        )
+                      }}]
                     </span>
                   </li>
                 </ul>
@@ -746,7 +970,9 @@ async function search() {
                 "
                 class="slot-panel"
               >
-                <p class="slot-heading">
+                <p
+                  class="slot-heading"
+                >
                   Current Available Folders:
                 </p>
 
@@ -767,11 +993,14 @@ async function search() {
                 >
                   <li
                     v-for="
-                      folder in availableFolders(
-                        result.post
-                      )
+                      folder in
+                        availableFolders(
+                          result.post
+                        )
                     "
-                    :key="folder.folder"
+                    :key="
+                      folder.folder
+                    "
                   >
                     <span>
                       {{ folder.name }}
@@ -792,11 +1021,15 @@ async function search() {
                   </li>
                 </ul>
 
-                <p class="slot-heading create-heading">
+                <p
+                  class="slot-heading create-heading"
+                >
                   Create New Folder:
                 </p>
 
-                <div class="new-folder">
+                <div
+                  class="new-folder"
+                >
                   <input
                     v-model="
                       newFolderNames[
@@ -900,7 +1133,10 @@ async function search() {
 
   color: green;
 
-  font-family: "Montella", serif;
+  font-family:
+    "Montella",
+    serif;
+
   font-size: 3rem;
   font-weight: 400;
   line-height: 1;
@@ -911,7 +1147,10 @@ async function search() {
 
   color: red;
 
-  font-family: "Montella", serif;
+  font-family:
+    "Montella",
+    serif;
+
   font-size: 2rem;
   font-weight: 400;
   line-height: 1;
@@ -983,7 +1222,12 @@ async function search() {
 }
 
 .selected-tags {
-  margin: 0.35rem 0 0 110px;
+  margin:
+    0.35rem
+    0
+    0
+    110px;
+
   padding-left: 0.75rem;
 }
 
@@ -1030,7 +1274,10 @@ async function search() {
 
   color: orange;
 
-  font-family: "Montella", serif;
+  font-family:
+    "Montella",
+    serif;
+
   font-size: 3rem;
   font-weight: 400;
   line-height: 1;
@@ -1044,6 +1291,7 @@ async function search() {
 
 .results-grid {
   display: grid;
+
   grid-template-columns:
     repeat(
       2,
@@ -1070,9 +1318,14 @@ async function search() {
 .result-card {
   min-width: 0;
 
-  padding: 0.65rem 0.75rem;
+  padding:
+    0.65rem
+    0.75rem;
 
-  border: 1px solid #181818;
+  border:
+    1px
+    solid
+    #181818;
 
   font-family:
     Inter,
@@ -1084,7 +1337,6 @@ async function search() {
   font-size: 0.82rem;
 }
 
-/* Result-card category labels */
 .result-label,
 .slot-heading {
   font-family:
@@ -1132,6 +1384,7 @@ async function search() {
 
 .result-tags {
   margin: 0.1rem 0 0;
+
   padding-left: 1.1rem;
 
   list-style: disc;
@@ -1188,7 +1441,10 @@ async function search() {
 
   padding-top: 0.6rem;
 
-  border-top: 1px solid #d5d5d5;
+  border-top:
+    1px
+    solid
+    #d5d5d5;
 }
 
 .slot-heading {
@@ -1198,13 +1454,20 @@ async function search() {
 }
 
 .no-folders {
-  margin: 0.2rem 0 0.6rem;
+  margin:
+    0.2rem
+    0
+    0.6rem;
 
   font-size: 0.78rem;
 }
 
 .folder-list {
-  margin: 0.2rem 0 0.6rem;
+  margin:
+    0.2rem
+    0
+    0.6rem;
+
   padding: 0;
 
   list-style: none;
@@ -1248,6 +1511,7 @@ async function search() {
 
 .text-action:disabled {
   color: #777;
+
   opacity: 0.45;
 
   cursor: default;
@@ -1282,6 +1546,21 @@ async function search() {
   color: red;
 
   font-size: 0.78rem;
+
+  animation:
+    slot-message-in
+    0.2s
+    ease;
+}
+
+@keyframes slot-message-in {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
 }
 
 /* ==============================
@@ -1303,7 +1582,8 @@ async function search() {
   }
 
   .results-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns:
+      1fr;
   }
 }
 
@@ -1334,7 +1614,8 @@ async function search() {
   }
 
   .results-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns:
+      1fr;
   }
 }
 
@@ -1370,6 +1651,7 @@ async function search() {
 
   .selected-tags {
     margin-left: 0;
+
     padding-left: 0;
   }
 }
