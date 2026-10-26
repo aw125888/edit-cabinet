@@ -687,7 +687,7 @@ onBeforeUnmount(() => {
   padding: 0;
 
   background: transparent;
-  color: red;
+  color: green;
 
   font: inherit;
 

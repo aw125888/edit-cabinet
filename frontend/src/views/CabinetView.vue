@@ -458,7 +458,7 @@ onBeforeUnmount(() => {
 
       <div class="collections-content">
         <h1 class="page-title">
-          My Personal Collections:
+          Slotted By Me:
         </h1>
 
         <!--
@@ -609,7 +609,7 @@ onBeforeUnmount(() => {
               />
 
               <button
-                class="red-action"
+                class="green-action"
                 type="button"
                 :disabled="
                   creatingFolder ||
@@ -951,6 +951,7 @@ onBeforeUnmount(() => {
    ============================== */
 
 .red-action,
+.green-action,
 .blue-action,
 .purple-action,
 .plain-action {
@@ -979,12 +980,19 @@ onBeforeUnmount(() => {
   color: red;
 }
 
+.green-action {
+  color:green;
+}
+
+
 .plain-action {
   color: #181818;
 }
 
 .red-action:hover,
 .red-action:focus-visible,
+.green-action:hover,
+.green-action:focus-visible,
 .blue-action:hover,
 .blue-action:focus-visible,
 .purple-action:hover,

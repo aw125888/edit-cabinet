@@ -122,14 +122,14 @@ onMounted(() => {
           type="button"
           @click="navigate('cabinet')"
         >
-          My Cabinet
+          Slotted By Me
         </button>
 
         <button
           type="button"
           @click="navigate('manage')"
         >
-          My Edits
+          Cataloged By Me
         </button>
 
         <button

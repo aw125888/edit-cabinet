@@ -939,7 +939,7 @@ onBeforeUnmount(() => {
   font-weight: 400;
   line-height: 1;
 
-  color: rgb(45, 0, 128);
+  color: rgb(86, 203, 50);
 }
 
 .loading-message {
@@ -1309,7 +1309,7 @@ onBeforeUnmount(() => {
   padding: 0;
 
   background: transparent;
-  color: red;
+  color: green;
 
   font: inherit;
   font-size: 0.75rem;

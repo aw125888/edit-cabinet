@@ -150,7 +150,6 @@ async function loadFolders() {
   folders.value = result.result.folders;
 }
 
-
 async function loadAddedFolders(
   post: string,
 ) {
@@ -197,6 +196,7 @@ function availableFolders(
       ),
   );
 }
+
 /*
  * Each result's Slot panel can open and close
  * independently.
@@ -218,11 +218,10 @@ async function toggleSlot(
 
   slotMessages.value[post] = "";
 
-try {
-  await loadFolders();
-  await loadAddedFolders(post);
-} catch (error) {
-
+  try {
+    await loadFolders();
+    await loadAddedFolders(post);
+  } catch (error) {
     if (error instanceof Error) {
       slotMessages.value[post] =
         error.message;
@@ -669,11 +668,17 @@ async function search() {
               </p>
 
               <!-- CAPTION -->
-              <p class="result-caption">
-                {{
-                  result.caption ||
-                  "Untitled edit"
-                }}
+              <p class="result-line">
+                <span class="result-label">
+                  Caption:
+                </span>
+
+                <span class="result-content result-caption">
+                  {{
+                    result.caption ||
+                    "Untitled edit"
+                  }}
+                </span>
               </p>
 
               <!-- CATALOGER -->
@@ -746,46 +751,46 @@ async function search() {
                 </p>
 
                 <p
-  v-if="
-    availableFolders(
-      result.post
-    ).length === 0
-  "
-  class="no-folders"
->
-  No available folders.
-</p>
+                  v-if="
+                    availableFolders(
+                      result.post
+                    ).length === 0
+                  "
+                  class="no-folders"
+                >
+                  No available folders.
+                </p>
 
-<ul
-  v-else
-  class="folder-list"
->
-  <li
-    v-for="
-      folder in availableFolders(
-        result.post
-      )
-    "
-    :key="folder.folder"
-  >
-    <span>
-      {{ folder.name }}
-    </span>
+                <ul
+                  v-else
+                  class="folder-list"
+                >
+                  <li
+                    v-for="
+                      folder in availableFolders(
+                        result.post
+                      )
+                    "
+                    :key="folder.folder"
+                  >
+                    <span>
+                      {{ folder.name }}
+                    </span>
 
-    <button
-      class="text-action"
-      type="button"
-      @click="
-        addPostToFolder(
-          result.post,
-          folder.folder
-        )
-      "
-    >
-      Add here
-    </button>
-  </li>
-</ul>
+                    <button
+                      class="text-action add-folder-action"
+                      type="button"
+                      @click="
+                        addPostToFolder(
+                          result.post,
+                          folder.folder
+                        )
+                      "
+                    >
+                      Add here
+                    </button>
+                  </li>
+                </ul>
 
                 <p class="slot-heading create-heading">
                   Create New Folder:
@@ -809,7 +814,7 @@ async function search() {
                   />
 
                   <button
-                    class="text-action"
+                    class="text-action create-folder-action"
                     type="button"
                     @click="
                       createFolder(
@@ -965,7 +970,7 @@ async function search() {
   padding: 0;
 
   background: transparent;
-  color: red;
+  color: green;
 
   font: inherit;
 
@@ -1006,7 +1011,6 @@ async function search() {
   margin-top: 0.5rem;
 }
 
-/* Errors are red. */
 .search-message {
   margin: 0.5rem 0;
 
@@ -1080,14 +1084,20 @@ async function search() {
   font-size: 0.82rem;
 }
 
-.result-label {
+/* Result-card category labels */
+.result-label,
+.slot-heading {
   font-family:
     "Times New Roman",
     Times,
     serif;
 
-  font-size: 0.95rem;
+  font-style: italic;
   font-weight: 400;
+}
+
+.result-label {
+  font-size: 0.95rem;
 }
 
 .result-line {
@@ -1108,11 +1118,6 @@ async function search() {
 }
 
 .result-caption {
-  margin: 0 0 0.35rem;
-
-  font-size: 0.82rem;
-  font-weight: 400;
-
   overflow-wrap: anywhere;
 }
 
@@ -1189,13 +1194,7 @@ async function search() {
 .slot-heading {
   margin: 0 0 0.3rem;
 
-  font-family:
-    "Times New Roman",
-    Times,
-    serif;
-
   font-size: 0.9rem;
-  font-weight: 400;
 }
 
 .no-folders {
@@ -1230,7 +1229,6 @@ async function search() {
   padding: 0;
 
   background: transparent;
-  color: red;
 
   font: inherit;
   font-size: 0.78rem;
@@ -1241,6 +1239,11 @@ async function search() {
 .text-action:hover,
 .text-action:focus-visible {
   text-decoration: underline;
+}
+
+.add-folder-action,
+.create-folder-action {
+  color: green;
 }
 
 .text-action:disabled {
@@ -1273,7 +1276,6 @@ async function search() {
   font-size: 0.78rem;
 }
 
-/* Slot errors are red. */
 .slot-message {
   margin: 0.4rem 0 0;
 
